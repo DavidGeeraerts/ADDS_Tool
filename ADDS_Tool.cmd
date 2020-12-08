@@ -31,7 +31,7 @@
 
 SET $PROGRAM_NAME=Active_Directory_Domain_Services_Tool
 SET $Version=0.0.0
-SET $BUILD=2020-11-24 0930
+SET $BUILD=2020-12-08 08:30
 Title %$PROGRAM_NAME% Version: %$Version%
 Prompt ADT$G
 color 8F
@@ -315,7 +315,7 @@ GoTo end
 
 :Search
 	:: Trap: Domain User check
-	echo %COMPUTERNAME% | (FIND /I "%$DOMAIN%") && (call :subDomain)
+	echo %COMPUTERNAME% | (FIND /I "%$DOMAIN%") && (GoTo :subDomain)
 	IF %$DU% EQU 0 call :subDA
 	IF /I "%$DC%"=="%COMPUTERNAME%" call :subDC
 	call :SMB
@@ -325,17 +325,19 @@ GoTo end
 	Echo [2] User
 	Echo [3] Group
 	ECho [4] Computer
-	echo [5] OU
-	echo [6] Settings Menu
-	echo [7] Main Menu
-	Echo [8] Exit
+	echo [5] Server ^(DC's^)
+	echo [6] OU
+	echo [7] Settings Menu
+	echo [8] Main Menu
+	Echo [9] Exit
 	Echo.
-	Choice /c 12345678
+	Choice /c 123456789
 	Echo.
-	If ERRORLevel 8 GoTo end
-	If ERRORLevel 7 GoTo Menu
-	If ERRORLevel 6 GoTo Uset
-	If ERRORLevel 5 GoTo sOU
+	If ERRORLevel 9 GoTo end
+	If ERRORLevel 8 GoTo Menu
+	If ERRORLevel 7 GoTo Uset
+	If ERRORLevel 6 GoTo sOU
+	If ERRORLevel 5 GoTo sServer
 	If ERRORLevel 4 GoTo sComputer
 	If ERRORLevel 3 GoTo sGroup
 	If ERRORLevel 2 GoTo sUser
@@ -343,7 +345,7 @@ GoTo end
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :SM
-	:: Search Menu
+	:: Search Menu banner
 	cls
 	ECHO ******************************************************
 	ECHO		%$PROGRAM_NAME% %$VERSION%
@@ -391,6 +393,7 @@ GoTo end
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :sUniversal
+	:: Search Universal
 	SET $LAST_SEARCH_TYPE=Universal
 	call :SM
 	SET $SEARCH_KEY=
@@ -450,9 +453,54 @@ GoTo end
 	Choice /c YN /m "[Y]es or [N]o":
 	IF %ERRORLEVEL% EQU 2 GoTo Menu
 	IF %ERRORLEVEL% EQU 1 GoTo sUniversal
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+:sUser
+	:: Search User
+	SET $LAST_SEARCH_TYPE=User
+	call :SM
+	SET $SEARCH_KEY=
+	::	Close previous Windows
+	taskkill /F /FI "WINDOWTITLE eq %$LAST_SEARCH_LOG% - Notepad" 2>nul 1>nul
+	REM UNDER DEVELOPMENT
+	GoTo err40
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+:sGroup
+	:: Search Group
+	SET $LAST_SEARCH_TYPE=Group
+	call :SM
+	SET $SEARCH_KEY=
+	::	Close previous Windows
+	taskkill /F /FI "WINDOWTITLE eq %$LAST_SEARCH_LOG% - Notepad" 2>nul 1>nul
+	REM UNDER DEVELOPMENT
+	GoTo err40
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+:sComputer
+	:: Search Computer
+	SET $LAST_SEARCH_TYPE=Computer
+	call :SM
+	SET $SEARCH_KEY=
+	::	Close previous Windows
+	taskkill /F /FI "WINDOWTITLE eq %$LAST_SEARCH_LOG% - Notepad" 2>nul 1>nul
+	REM UNDER DEVELOPMENT
+	GoTo err40
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+:sServer
+	:: Search Server
+	SET $LAST_SEARCH_TYPE=Server
+	call :SM
+	SET $SEARCH_KEY=
+	::	Close previous Windows
+	taskkill /F /FI "WINDOWTITLE eq %$LAST_SEARCH_LOG% - Notepad" 2>nul 1>nul
+	REM UNDER DEVELOPMENT
+	GoTo err40
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :sOU
+	:: Search OU
 	SET "$LAST_SEARCH_TYPE=OrganizationalUnit^(OU^)"
 	call :SM
 	IF NOT DEFINED $SEARCH_KEY (SET $SEARCH_KEY_LAST=NA) ELSE (SET $SEARCH_KEY_LAST=%$SEARCH_KEY%)
@@ -795,7 +843,7 @@ SET "$DC_TAG=DS Settings"
 	echo Change Domain Controller?
 	Choice /c yn /m "[y]es or [n]o":
 	:: mark may not work
-	IF %ERRORLEVEL% EQU 2 GoTo:EOF & GoTo uSetDC
+	IF %ERRORLEVEL% EQU 2 GoTo uSetDC
 	IF %ERRORLEVEL% EQU 1 GoTo subDC
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -817,13 +865,13 @@ SET "$DC_TAG=DS Settings"
 	IF %$CHECK_DOMAIN% EQU 1 (Echo Domain not found!) & (timeout /t 10) & (GoTo subDomain)
 	Echo Domain configured: %$DOMAIN% 
 	timeout /t 10
-	GoTo:EOF
+	REM Having GoTo:EOF if not called
 	GoTo uSetDC
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :subDS
 	::traps
-	echo %COMPUTERNAME% | (FIND /I "%$DOMAIN%") && (call :subDomain)
+	echo %COMPUTERNAME% | (FIND /I "%$DOMAIN%") && (GoTo subDomain)
 	IF %$DU% EQU 0 call :subDA
 	IF /I "%$DC%"=="%COMPUTERNAME%" call :subDC
 	:: sub-routine Domain Site
@@ -1059,7 +1107,15 @@ GoTo end
 	GoTo subDA
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-
+:err40
+	:: Error Under Development
+	call :ErrBann
+	echo	UNDER CONSTRUCTION
+	echo.
+	echo	Feature: %$LAST_SEARCH_TYPE% search
+	echo.
+	timeout /t 60
+GoTo Search
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :end
