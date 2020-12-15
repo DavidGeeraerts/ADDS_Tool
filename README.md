@@ -1,17 +1,28 @@
 # Active Directory Domain Services Tool (ADDS_Tool)
 
 **UNDER DEVELOPMENT**
-
-*Considering weekly build release*
+:rocket:
+*Weekly build release*
 
 ## What's Working
 
-- Main Menu
-- Settings Menu
-- Logs
-- Search Universal
-- Search OU
+- [X] Main Menu
+- [X] Settings Menu
+- [X] Logs
+- [X] Search Universal
+- [ ] Search User
+- [X] Search Group
+- [ ] Search Computer
+- [ ] Search Server
+- [X] Search OU
+
 
 ### Images
 
 ![Main Menu](./images/Main_Menu_Local.png)
+
+
+
+
+### Parameters
+

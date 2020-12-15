@@ -2,21 +2,25 @@
 
 
 ## Search
-	User
-	Group
-	Computer
-	OU
+	Server
 
+	Computer
+	User --last
 
 ## Features
  - Dark Mode / Light Mode
  - Timeout
- - Default Editor (Notepad)
- 
+ - Choose Default Editor (Notepad)
+ - include UTC
+ - Include ISO8601
 
 ## DONE
-- Settings
+### Settings
 	- Log Settings
 	- Clear Log
 	- Change Domain Controller
 	- Domain Credentials
+
+### Search
+	- OU	
+	- Group

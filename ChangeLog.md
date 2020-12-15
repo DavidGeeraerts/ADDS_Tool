@@ -19,6 +19,22 @@
 
 ---
 
+## Version 0.0.0 Build: 2020-12-15
+#### Added
+- Search Universal attribute
+- Group search by name, description, displayname
+
+#### Changed
+- Universal output to be consistent
+- OU search and output to be consistent
+
+#### Fixed
+- log name typo
+- Forestroot search for OU
+
+
+---
+
 ## Version 0.0.0 Build: 2020-12-08
 #### Added
 - Under development
