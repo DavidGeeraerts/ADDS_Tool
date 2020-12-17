@@ -19,6 +19,25 @@
 
 ---
 
+## Version 0.0.0 Build: 2020-12-
+#### Added
+- End search time
+- Server (DC) search
+- ISO8601 date stamp
+- recall custom OU in search settings
+- Total lapse time for search(s)
+- Session log includes PID
+- UTC to logs
+
+#### Fixed
+- Group search using description that had spaces in DN
+
+#### Removed
+- Universal search using "*" wildcard
+
+
+---
+
 ## Version 0.0.0 Build: 2020-12-15
 #### Added
 - Search Universal attribute
@@ -32,8 +51,6 @@
 - log name typo
 - Forestroot search for OU
 
-
----
 
 ## Version 0.0.0 Build: 2020-12-08
 #### Added

@@ -13,6 +13,7 @@
  - Choose Default Editor (Notepad)
  - include UTC
  - Include ISO8601
+ - Search lapse time
 
 ## DONE
 ### Settings
