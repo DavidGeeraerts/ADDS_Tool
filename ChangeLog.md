@@ -19,7 +19,7 @@
 
 ---
 
-## Version 0.0.0 Build: 2020-12-
+## Version 0.0.0 Build: 2020-12-17
 #### Added
 - End search time
 - Server (DC) search

@@ -1,21 +1,24 @@
 # To Do
 
-
 ## Search
-	Server
-
 	Computer
 	User --last
+
 
 ## Features
  - Dark Mode / Light Mode
  - Timeout
  - Choose Default Editor (Notepad)
+
+
+## DONE
+
+### Features
+
  - include UTC
  - Include ISO8601
  - Search lapse time
 
-## DONE
 ### Settings
 	- Log Settings
 	- Clear Log
@@ -24,4 +27,5 @@
 
 ### Search
 	- OU	
-	- Group
+	- Group	
+	- Server
