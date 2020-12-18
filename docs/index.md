@@ -1,8 +1,8 @@
 # Active Directory Domain Services Tool (ADDS_Tool)
 
-![Main Banner](./images/ADDS_T_Main_Banner.png)
+![banner](/images/ADDS_T_Main_Banner.png)
 
-<h2 align="center"> :bangbang:  :construction:  :bangbang: UNDER DEVELOPMENT :bangbang:  :construction:  :bangbang: </h2> <br>
+:bangbang: :construction: :bangbang: UNDER DEVELOPMENT :bangbang: :construction: :bangbang:
 
 
 *Weekly build release*
@@ -19,7 +19,7 @@
 
 ## Images
 
-![Main Menu](./images/Main_Menu_Local.png)
+![Main Menu](/images/Main_Menu_Local.png)
 
 
 ## Introduction
