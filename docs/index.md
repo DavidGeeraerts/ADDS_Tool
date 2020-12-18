@@ -1,37 +1,79 @@
-## Welcome to GitHub Pages
+# Active Directory Domain Services Tool (ADDS_Tool)
 
-You can use the [editor on GitHub](https://github.com/DavidGeeraerts/ADDS_Tool/edit/main/docs/index.md) to maintain and preview the content for your website in Markdown files.
+![Main Banner](./images/ADDS_T_Main_Banner.png)
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+<h2 align="center"> :bangbang:  :construction:  :bangbang: UNDER DEVELOPMENT :bangbang:  :construction:  :bangbang: </h2> <br>
 
-### Markdown
 
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
+*Weekly build release*
 
-```markdown
-Syntax highlighted code block
 
-# Header 1
-## Header 2
-### Header 3
+## Table of Contents
 
-- Bulleted
-- List
+- [Images](#Images)
+- [Introduction](#introduction)
+- [Dependencies](#Dependencies)
+- [Features](#features)
+- [Changelog](#Changelog)
+- [License](#License)
 
-1. Numbered
-2. List
+## Images
 
-**Bold** and _Italic_ and `Code` text
+![Main Menu](./images/Main_Menu_Local.png)
 
-[Link](url) and ![Image](src)
-```
 
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
+## Introduction
 
-### Jekyll Themes
+Windows Command shell program that is a wrapper for ADDS toolset:
+	- `DSQUERY`
+	- `DSGET`
+	- `DSADD`
+	- `DSMOD`
+	- `DSMOVE`
+	
+The advantage of using ADDS Tool over something like [Active Directory Explorer](https://docs.microsoft.com/en-us/sysinternals/downloads/adexplorer):
+ - Command shell is faster.
+ - Navigating shell menu is quicker.
+ - Every search is saved to log file; text files are easy to extract information from, and stores a historical search record.
+ - ADDS Tool allows setting parameters, most important is the `-limit` parameter, which by default is set to `-limit 0`.
 
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/DavidGeeraerts/ADDS_Tool/settings). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
+*Why not PowerShell?*
+I like the windows command shell. It does most of what's needed. When the shell is lacking, PowerShell can be leveraged, which the program does.
 
-### Support or Contact
 
-Having trouble with Pages? Check out our [documentation](https://docs.github.com/categories/github-pages-basics/) or [contact support](https://github.com/contact) and we’ll help you sort it out.
+## Dependencies
+
+ADDS_Tool requires (RSAT) [Remote Server Administrative Tools](https://docs.microsoft.com/en-us/troubleshoot/windows-server/system-management-components/remote-server-administration-tools). 
+The program will ask to install if not detected, using [DISM](https://docs.microsoft.com/en-us/windows-hardware/manufacture/desktop/what-is-dism). 
+Must be runnig with administartive privilege in order to install RSAT. 
+
+[PowerShell](https://docs.microsoft.com/en-us/powershell/scripting/overview): Leveraged for some functions.
+
+
+## Features
+
+ What's Working
+
+*Currently only searching is working.*
+
+- [X] Main Menu
+- [X] Settings Menu
+- [X] Logs
+- [X] Search Universal
+- [ ] Search User
+- [X] Search Group
+- [ ] Search Computer
+- [X] Search Server
+- [X] Search OU
+
+## Changelog
+
+See [changelog.md](changelog.md)
+
+
+## License
+
+[GPL](LICENSE) © David Geeraerts
+
+
+:us:
