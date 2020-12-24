@@ -1,31 +1,25 @@
 # To Do
 
-## Search
-	Computer
-	User --last
+## Priority Ordered
+
+ - [ ] Search Computer
+	- [ ] 
+ - [ ] Suppress Verbose output parameter
+ - [ ] Search User --will be last
+ - [ ] Dark Mode / Light Mode
+ - [ ] Timeout
+ - [ ] AD Recon
 
 
-## Features
- - Dark Mode / Light Mode
- - Timeout
- - Choose Default Editor (Notepad)
+### Done
 
-
-## DONE
-
-### Features
-
- - include UTC
- - Include ISO8601
- - Search lapse time
-
-### Settings
-	- Log Settings
-	- Clear Log
-	- Change Domain Controller
-	- Domain Credentials
-
-### Search
-	- OU	
-	- Group	
-	- Server
+ - [X] include UTC
+ - [X] Include ISO8601
+ - [X] Search lapse time
+ - [X] Log Settings
+ - [X] Clear Log
+ - [X] Change Domain Controller
+ - [X] Domain Credentials
+ - [X] OU	
+ - [X] Group	
+ - [X] Server

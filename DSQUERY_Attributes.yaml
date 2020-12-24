@@ -33,7 +33,8 @@ Computer:
  - operatingSystem
  - operatingSystemVersion
  - operatingSystemServicePack
-- logonCount
+ - logonCount
+ - managedBy
 
 User:
 - userPrincipalName 

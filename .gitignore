@@ -5,3 +5,4 @@
 ADDS_USER_QUERY.cmd
 DSQUERY_Attributes_Sorted.txt
 *.backup
+*Test.cmd

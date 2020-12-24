@@ -10,19 +10,26 @@
 
 ## Table of Contents
 
-- [Images](#Images)
-- [Introduction](#introduction)
-- [Dependencies](#Dependencies)
+- [Documents](#Documents)
+- [Screenshots](#Screenshots)
+- [Description](#Description)
 - [Features](#features)
+- [Dependencies](#Dependencies)
 - [Changelog](#Changelog)
 - [License](#License)
 
-## Images
+
+## Documents
+
+ - [changelog.md](changelog.md)
+
+
+## Screenshots
 
 ![Main Menu](./images/Main_Menu_Local.png)
 
 
-## Introduction
+## Description
 
 Windows Command shell program that is a wrapper for ADDS toolset:
 	- `DSQUERY`
@@ -41,15 +48,6 @@ The advantage of using ADDS Tool over something like [Active Directory Explorer]
 I like the windows command shell. It does most of what's needed. When the shell is lacking, PowerShell can be leveraged, which the program does.
 
 
-## Dependencies
-
-ADDS_Tool requires (RSAT) [Remote Server Administrative Tools](https://docs.microsoft.com/en-us/troubleshoot/windows-server/system-management-components/remote-server-administration-tools). 
-The program will ask to install if not detected, using [DISM](https://docs.microsoft.com/en-us/windows-hardware/manufacture/desktop/what-is-dism). 
-Must be runnig with administartive privilege in order to install RSAT. 
-
-[PowerShell](https://docs.microsoft.com/en-us/powershell/scripting/overview): Leveraged for some functions.
-
-
 ## Features
 
  What's Working
@@ -62,18 +60,43 @@ Must be runnig with administartive privilege in order to install RSAT.
 - [X] Search Universal
 - [ ] Search User
 - [X] Search Group
-- [ ] Search Computer
+- [X] Search Computer
 - [X] Search Server
 - [X] Search OU
 
-## Changelog
 
-See [changelog.md](changelog.md)
+## Logs
+
+Default for logging is pathed to: `%APPDATA%\ADDS`
+
+`ADDS_Tool_Active_Session.log` --User session information
+
+`ADDS_Tool_Session_Archive.log` --archive log for all sessions
+
+`ADDS_Tool_Last_Search.log` --will contain last search results
+
+`ADDS_Tool_Session_Search.log` --will contain all searches for the session
+
+`ADDS_Tool_Search_Archive.log` --archive log for all searches
+
+
+## Dependencies
+
+ADDS_Tool requires (RSAT) [Remote Server Administrative Tools](https://docs.microsoft.com/en-us/troubleshoot/windows-server/system-management-components/remote-server-administration-tools). 
+The program will ask to install if not detected, using [DISM](https://docs.microsoft.com/en-us/windows-hardware/manufacture/desktop/what-is-dism). 
+Must be runnig with administartive privilege in order to install RSAT. 
+
+[PowerShell](https://docs.microsoft.com/en-us/powershell/scripting/overview): Leveraged for some functions.
+
+
+## Configuration
+
+
+
 
 
 ## License
 
-[GPL](LICENSE) © David Geeraerts
-
+[GPL](LICENSE)
 
 :us:

@@ -19,6 +19,25 @@
 
 ---
 
+## Version 0.1.0 Build: 2020-12-24
+#### Added
+- Computer search
+- Variable debug function
+
+#### Changed
+- color output by type
+- $Counter to $COUNTER_SEARCH
+- UTC gathering method
+- Version in menu
+
+#### Fixed
+- local user query for Group
+
+#### Removed
+- timeout after no search results
+
+---
+
 ## Version 0.0.0 Build: 2020-12-17
 #### Added
 - End search time
@@ -35,8 +54,6 @@
 #### Removed
 - Universal search using "*" wildcard
 
-
----
 
 ## Version 0.0.0 Build: 2020-12-15
 #### Added
