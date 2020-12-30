@@ -33,8 +33,8 @@
 
 
 SET $PROGRAM_NAME=Active_Directory_Domain_Services_Tool
-SET $Version=0.1.0
-SET $BUILD=2020-12-24 14:30
+SET $Version=0.2.0
+SET $BUILD=2020-12-30 10:00
 Title %$PROGRAM_NAME%
 Prompt ADT$G
 color 8F
@@ -496,7 +496,7 @@ GoTo end
 	echo Number of search results: %$LAST_SEARCH_COUNT%
 	IF %$LAST_SEARCH_COUNT% EQU 0 @powershell Write-Host "Nothing found! Try again with broader wildcard" -ForegroundColor Red
 	IF %$LAST_SEARCH_COUNT% EQU 0 GoTo jumpSUC
-	echo Processing...
+	@powershell Write-Host "Processing..." -ForegroundColor DarkYellow
 	type "%$LogPath%\var\var_Last_Search_N_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -552,12 +552,1333 @@ GoTo SkipSUL
 :sUser
 	:: Search User
 	SET $LAST_SEARCH_TYPE=User
+	SET $LAST_SEARCH_ATTRIBUTE=
 	call :SM
 	SET $SEARCH_KEY=
 	::	Close previous Windows
 	taskkill /F /FI "WINDOWTITLE eq %$LAST_SEARCH_LOG% - Notepad" 2>nul 1>nul
-	REM UNDER DEVELOPMENT
-	GoTo err40
+
+	echo User search using:
+	echo.
+	echo [1] Name
+	echo [2] UPN
+	echo [3] First and Last name
+	echo [4] Display name
+	echo [5] Custom attribute search 
+	echo [6] Global
+	echo [7] Abort
+	echo.
+	Choice /c 1234567
+	echo.
+	If ERRORLevel 7 GoTo Search
+	If ERRORLevel 6 GoTo SUG
+	If ERRORLevel 5 GoTo SUCA
+	If ERRORLevel 4 GoTo SUDN
+	If ERRORLevel 3 GoTo SUFL
+	If ERRORLevel 2 GoTo SUU
+	If ERRORLevel 1 GoTo SUN
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+:SUN
+	:: Search User Name
+	taskkill /F /FI "WINDOWTITLE eq %$LAST_SEARCH_LOG% - Notepad" 2>nul 1>nul
+	call :SM
+	@powershell Write-Host "Name" -ForegroundColor Blue
+	@powershell Write-Host "Can use "*" wildcard for search." -ForegroundColor Gray
+	@powershell Write-Host "If left blank, will abort." -ForegroundColor Red
+	SET $LAST_SEARCH_ATTRIBUTE=name
+	SET $SEARCH_KEY_USER_NAME=
+	SET /P $SEARCH_KEY_USER_NAME=User name search key:
+	SET $LAST_SEARCH_KEY=%$SEARCH_KEY_USER_NAME%
+	IF NOT DEFINED $SEARCH_KEY_USER_NAME GoTo sUser
+	call :SM
+	echo Selected {%$SEARCH_KEY_USER_NAME%} as name search key.
+	@powershell Write-Host "Searching..." -ForegroundColor DarkYellow
+	:: Start Elapse Time
+	call :subSET
+	IF EXIST "%$LogPath%\%$LAST_SEARCH_LOG%" DEL /Q "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Start search %DATE% %Time% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo UTC: %$UTC% %$UTC_STANDARD_NAME% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Search Type: %$LAST_SEARCH_TYPE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Search Attribute: %$LAST_SEARCH_ATTRIBUTE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Search Key Name: %$SEARCH_KEY_USER_NAME% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Search AD Root: %$AD_BASE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Search AD Scope: %$AD_SCOPE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Domain Controller: %$DC% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Domain: %$DOMAIN% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	REM If Forestroot, then searches GC Global Catalog.
+	set "$AD_SERVER_SEARCH=-s %$DC%.%$DOMAIN%" 
+	if %$AD_BASE%==forestroot SET "$AD_SERVER_SEARCH=-gc"	
+	if %$DEGUB_MODE% EQU 1 CALL :fVarD
+	if %$SORTED% EQU 1 GoTo jumpSUNS
+	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_KEY_USER_NAME%" -limit %$sLimit% %$AD_SERVER_SEARCH%  > "%$LogPath%\var\var_Last_Search_N.txt") ELSE (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_KEY_USER_NAME%" -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% > "%$LogPath%\var\var_Last_Search_N.txt"
+		)
+	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_KEY_USER_NAME%"-limit %$sLimit% %$AD_SERVER_SEARCH% > "%$LogPath%\var\var_Last_Search_DN.txt") ELSE (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_KEY_USER_NAME%" -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% > "%$LogPath%\var\var_Last_Search_DN.txt"
+		)	
+	if %$SORTED% NEQ 1 GoTo skipSUNS
+:jumpSUNS
+	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_KEY_USER_NAME%" -limit %$sLimit% %$AD_SERVER_SEARCH% | sort  > "%$LogPath%\var\var_Last_Search_N.txt") ELSE (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_KEY_USER_NAME%" -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% | sort > "%$LogPath%\var\var_Last_Search_N.txt"
+		)
+	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_KEY_USER_NAME%" -limit %$sLimit% %$AD_SERVER_SEARCH% | sort > "%$LogPath%\var\var_Last_Search_DN.txt") ELSE (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_KEY_USER_NAME%" -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% | sort > "%$LogPath%\var\var_Last_Search_DN.txt"
+		)	
+:skipSUNS
+	:: Main output
+	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\var\var_Last_Search_Count.txt"
+	:: remove leading space
+	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\var\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\var\var_Last_Search_Count.txt"
+	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\var\var_Last_Search_Count.txt"
+	echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Number of search results: %$LAST_SEARCH_COUNT%	
+	IF %$LAST_SEARCH_COUNT% EQU 0 GoTo jumpSUNO
+	@powershell Write-Host "Processing..." -ForegroundColor DarkYellow	
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo User Names returned: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	type "%$LogPath%\var\var_Last_Search_N.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo User Distinguisged Names: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	type "%$LogPath%\var\var_Last_Search_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"	
+	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Verbose Output: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"	
+
+	:: Detailed Output
+	if NOT "%$SESSION_USER%"=="%$DOMAIN_USER%" GoTo jumpSUNL
+	:: Session user is a domain user
+	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr name cn %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr sn givenName %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr displayName %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo User DN: %%N >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (		
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Organization Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr company %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr department %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr title %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr description %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr manager %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo Contact Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr mail %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr telephoneNumber %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo Location Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr physicalDeliveryOfficeName streetAddress l st postalCode co %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	echo Details: >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr * %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%")
+	)
+	GoTo jumpSUNO
+:jumpSUNL
+	:: Session user is a local user
+	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr name cn %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr sn givenName %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr displayName %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo User DN: %%N >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (		
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Organization Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr company %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr department %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr title %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr description %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr manager %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo Contact Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr mail %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr telephoneNumber %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo Location Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr physicalDeliveryOfficeName streetAddress l st postalCode co %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	echo Details: >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr * %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%")
+	)	
+
+:jumpSUNO
+	call :subTLT
+	echo Total Search Time: %$TOTAL_LAPSE_TIME%
+	echo Total Search Time: %$TOTAL_LAPSE_TIME% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo End search: %DATE% %Time% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	IF %$LAST_SEARCH_COUNT% EQU 0 @powershell Write-Host "Nothing found! Try again with broader wildcard" -ForegroundColor Red
+	IF %$LAST_SEARCH_COUNT% EQU 0 GoTo skipSUN
+	:: Search counter increment
+	Call :fSC
+	:: Open log files
+	@explorer "%$LogPath%\%$LAST_SEARCH_LOG%"
+	type "%$LogPath%\%$LAST_SEARCH_LOG%" >> "%$LogPath%\%$SEARCH_SESSION_LOG%"
+
+
+:skipSUN
+	echo Search User Again?
+	Choice /c YN /m "[Y]es or [N]o":
+	IF %ERRORLEVEL% EQU 2 GoTo Search
+	IF %ERRORLEVEL% EQU 1 GoTo SUN
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::	
+
+:SUU
+	:: Search User UPN
+	taskkill /F /FI "WINDOWTITLE eq %$LAST_SEARCH_LOG% - Notepad" 2>nul 1>nul
+	call :SM
+	@powershell Write-Host "UPN" -ForegroundColor Blue
+	@powershell Write-Host "Can use "*" wildcard for search." -ForegroundColor Gray
+	@powershell Write-Host "If left blank, will abort." -ForegroundColor Red
+	SET $LAST_SEARCH_ATTRIBUTE=UPN
+	SET $SEARCH_KEY_USER_UPN=
+	SET /P $SEARCH_KEY_USER_UPN=User upn search key:
+	SET $LAST_SEARCH_KEY=%$SEARCH_KEY_USER_NAME%
+	IF NOT DEFINED $SEARCH_KEY_USER_UPN GoTo sUser
+	call :SM
+	echo Selected {%$SEARCH_KEY_USER_UPN%} as upn search key.
+	@powershell Write-Host "Searching..." -ForegroundColor DarkYellow
+	:: Start Elapse Time
+	call :subSET
+	IF EXIST "%$LogPath%\%$LAST_SEARCH_LOG%" DEL /Q "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Start search %DATE% %Time% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo UTC: %$UTC% %$UTC_STANDARD_NAME% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Search Type: %$LAST_SEARCH_TYPE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Search Attribute: %$LAST_SEARCH_ATTRIBUTE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Search Key UPN: %$SEARCH_KEY_USER_UPN% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Search AD Root: %$AD_BASE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Search AD Scope: %$AD_SCOPE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Domain Controller: %$DC% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Domain: %$DOMAIN% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	REM If Forestroot, then searches GC Global Catalog.
+	set "$AD_SERVER_SEARCH=-s %$DC%.%$DOMAIN%" 
+	if %$AD_BASE%==forestroot SET "$AD_SERVER_SEARCH=-gc"	
+	if %$DEGUB_MODE% EQU 1 CALL :fVarD
+	if %$SORTED% EQU 1 GoTo jumpSUUS
+	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_KEY_USER_UPN%" -limit %$sLimit% %$AD_SERVER_SEARCH%  > "%$LogPath%\var\var_Last_Search_N.txt") ELSE (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_KEY_USER_UPN%" -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% > "%$LogPath%\var\var_Last_Search_N.txt"
+		)
+	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_KEY_USER_UPN%"-limit %$sLimit% %$AD_SERVER_SEARCH% > "%$LogPath%\var\var_Last_Search_DN.txt") ELSE (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_KEY_USER_UPN%" -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% > "%$LogPath%\var\var_Last_Search_DN.txt"
+		)	
+	if %$SORTED% NEQ 1 GoTo skipSUUS
+:jumpSUUS
+	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_KEY_USER_UPN%" -limit %$sLimit% %$AD_SERVER_SEARCH% | sort  > "%$LogPath%\var\var_Last_Search_N.txt") ELSE (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_KEY_USER_UPN%" -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% | sort > "%$LogPath%\var\var_Last_Search_N.txt"
+		)
+	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_KEY_USER_UPN%" -limit %$sLimit% %$AD_SERVER_SEARCH% | sort > "%$LogPath%\var\var_Last_Search_DN.txt") ELSE (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_KEY_USER_UPN%" -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% | sort > "%$LogPath%\var\var_Last_Search_DN.txt"
+		)	
+:skipSUUS
+	:: Main output
+	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\var\var_Last_Search_Count.txt"
+	:: remove leading space
+	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\var\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\var\var_Last_Search_Count.txt"
+	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\var\var_Last_Search_Count.txt"
+	echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Number of search results: %$LAST_SEARCH_COUNT%	
+	IF %$LAST_SEARCH_COUNT% EQU 0 GoTo jumpSUUO
+	@powershell Write-Host "Processing..." -ForegroundColor DarkYellow	
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo User Names returned: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	type "%$LogPath%\var\var_Last_Search_N.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo User Distinguisged Names: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	type "%$LogPath%\var\var_Last_Search_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"	
+	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Verbose Output: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"	
+
+	:: Detailed Output
+	if NOT "%$SESSION_USER%"=="%$DOMAIN_USER%" GoTo jumpSUUL
+	:: Session user is a domain user
+	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr name cn userPrincipalName %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr sn givenName %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr displayName %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo User DN: %%N >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (		
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Organization Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr company %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr department %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr title %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr description %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr manager %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo Contact Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr mail %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr telephoneNumber %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo Location Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr physicalDeliveryOfficeName streetAddress l st postalCode co %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	echo Details: >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr * %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%")
+	)
+	GoTo jumpSUUO
+:jumpSUUL
+	:: Session user is a local user
+	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr name cn userPrincipalName %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr sn givenName %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr displayName %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo User DN: %%N >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (		
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Organization Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr company %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr department %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr title %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr description %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr manager %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo Contact Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr mail %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr telephoneNumber %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo Location Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr physicalDeliveryOfficeName streetAddress l st postalCode co %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	echo Details: >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr * %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%")
+	)	
+
+:jumpSUUO
+	call :subTLT
+	echo Total Search Time: %$TOTAL_LAPSE_TIME%
+	echo Total Search Time: %$TOTAL_LAPSE_TIME% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo End search: %DATE% %Time% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	IF %$LAST_SEARCH_COUNT% EQU 0 @powershell Write-Host "Nothing found! Try again with broader wildcard" -ForegroundColor Red
+	IF %$LAST_SEARCH_COUNT% EQU 0 GoTo skipSUU
+	:: Search counter increment
+	Call :fSC
+	:: Open log files
+	@explorer "%$LogPath%\%$LAST_SEARCH_LOG%"
+	type "%$LogPath%\%$LAST_SEARCH_LOG%" >> "%$LogPath%\%$SEARCH_SESSION_LOG%"
+
+:skipSUU
+	echo Search User Again?
+	Choice /c YN /m "[Y]es or [N]o":
+	IF %ERRORLEVEL% EQU 2 GoTo Search
+	IF %ERRORLEVEL% EQU 1 GoTo SUU	
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+:SUFL
+	:: Search User first and last name
+	taskkill /F /FI "WINDOWTITLE eq %$LAST_SEARCH_LOG% - Notepad" 2>nul 1>nul
+	SET $LAST_SEARCH_ATTRIBUTE=FirstLast
+	call :SM
+	SET $SEARCH_KEY_USER_FIRST=
+	@powershell Write-Host "givenName - First" -ForegroundColor Blue
+	@powershell Write-Host "Can use "*" wildcard for search." -ForegroundColor Gray
+	@powershell Write-Host "If left blank, will default to wildcard *" -ForegroundColor Magenta
+	SET /P $SEARCH_KEY_USER_FIRST=User FirstName search key:
+	IF NOT DEFINED $SEARCH_KEY_USER_FIRST SET $SEARCH_KEY_USER_FIRST=*
+	call :SM
+	SET $SEARCH_KEY_USER_LAST=
+	@powershell Write-Host "sn - surename - Last" -ForegroundColor Blue
+	@powershell Write-Host "Can use * wildcard for search." -ForegroundColor Gray
+	@powershell Write-Host "If left blank, will default to wildcard *" -ForegroundColor Magenta
+	SET /P $SEARCH_KEY_USER_LAST=User LastName search key:
+	IF NOT DEFINED $SEARCH_KEY_USER_LAST SET $SEARCH_KEY_USER_LAST=*
+	call :SM	
+	echo Selected {%$SEARCH_KEY_USER_FIRST%} as FirstName search key.
+	echo Selected {%$SEARCH_KEY_USER_LAST%} as LastName search key.
+	@powershell Write-Host "Searching..." -ForegroundColor DarkYellow
+	:: Start Elapse Time
+	call :subSET
+	IF EXIST "%$LogPath%\%$LAST_SEARCH_LOG%" DEL /Q "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Start search %DATE% %Time% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo UTC: %$UTC% %$UTC_STANDARD_NAME% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Search Type: %$LAST_SEARCH_TYPE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Search Attribute: %$LAST_SEARCH_ATTRIBUTE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Search Key FirstName: %$SEARCH_KEY_USER_FIRST% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Search Key LastName: %$SEARCH_KEY_USER_LAST% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Search AD Root: %$AD_BASE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Search AD Scope: %$AD_SCOPE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Domain Controller: %$DC% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Domain: %$DOMAIN% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	REM If Forestroot, then searches GC Global Catalog.
+	set "$AD_SERVER_SEARCH=-s %$DC%.%$DOMAIN%" 
+	if %$AD_BASE%==forestroot SET "$AD_SERVER_SEARCH=-gc"	
+	if %$DEGUB_MODE% EQU 1 CALL :fVarD
+	if %$SORTED% EQU 1 GoTo jumpSUFLS
+	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(givenName=%$SEARCH_KEY_USER_FIRST%)(sn=%$SEARCH_KEY_USER_LAST%))" -attr name distinguishedName %$AD_SERVER_SEARCH% > "%$LogPath%\var\var_Last_Search_N_DN.txt") ELSE (
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(givenName=%$SEARCH_KEY_USER_FIRST%)(sn=%$SEARCH_KEY_USER_LAST%))" -attr name distinguishedName %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% > "%$LogPath%\var\var_Last_Search_N_DN.txt"
+	)
+	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(givenName=%$SEARCH_KEY_USER_FIRST%)(sn=%$SEARCH_KEY_USER_LAST%))" -attr name %$AD_SERVER_SEARCH% > "%$LogPath%\var\var_Last_Search_N.txt") ELSE (
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(givenName=%$SEARCH_KEY_USER_FIRST%)(sn=%$SEARCH_KEY_USER_LAST%))" -attr name %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% > "%$LogPath%\var\var_Last_Search_N.txt"
+	)
+	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(givenName=%$SEARCH_KEY_USER_FIRST%)(sn=%$SEARCH_KEY_USER_LAST%))" -attr distinguishedName %$AD_SERVER_SEARCH% > "%$LogPath%\var\var_Last_Search_DN.txt") ELSE (
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(givenName=%$SEARCH_KEY_USER_FIRST%)(sn=%$SEARCH_KEY_USER_LAST%))" -attr distinguishedName %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% > "%$LogPath%\var\var_Last_Search_DN.txt"
+	)	
+	if %$SORTED% NEQ 1 GoTo skipSUFLS
+:jumpSUFLS
+	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(givenName=%$SEARCH_KEY_USER_FIRST%)(sn=%$SEARCH_KEY_USER_LAST%))" -attr name distinguishedName %$AD_SERVER_SEARCH% | sort > "%$LogPath%\var\var_Last_Search_N_DN.txt") ELSE (
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(givenName=%$SEARCH_KEY_USER_FIRST%)(sn=%$SEARCH_KEY_USER_LAST%))" -attr name distinguishedName %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% | sort > "%$LogPath%\var\var_Last_Search_N_DN.txt"
+	)
+	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(givenName=%$SEARCH_KEY_USER_FIRST%)(sn=%$SEARCH_KEY_USER_LAST%))" -attr name %$AD_SERVER_SEARCH% | sort > "%$LogPath%\var\var_Last_Search_N.txt") ELSE (
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(givenName=%$SEARCH_KEY_USER_FIRST%)(sn=%$SEARCH_KEY_USER_LAST%))" -attr name %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% | sort > "%$LogPath%\var\var_Last_Search_N.txt"
+	)
+	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(givenName=%$SEARCH_KEY_USER_FIRST%)(sn=%$SEARCH_KEY_USER_LAST%))" -attr distinguishedName %$AD_SERVER_SEARCH% | sort > "%$LogPath%\var\var_Last_Search_DN.txt") ELSE (
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(givenName=%$SEARCH_KEY_USER_FIRST%)(sn=%$SEARCH_KEY_USER_LAST%))" -attr distinguishedName %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% | sort > "%$LogPath%\var\var_Last_Search_DN.txt"
+	)	
+
+:skipSUFLS
+	:: Main output
+	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\var\var_Last_Search_Count.txt"
+	:: remove leading space
+	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\var\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\var\var_Last_Search_Count.txt"
+	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\var\var_Last_Search_Count.txt"
+	echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Number of search results: %$LAST_SEARCH_COUNT%	
+	IF %$LAST_SEARCH_COUNT% EQU 0 GoTo jumpSUFLO
+	@powershell Write-Host "Processing..." -ForegroundColor DarkYellow	
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo User Names returned: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	:: Munge N_DN file
+	IF EXIST "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
+	type "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_N_DN.txt"
+	type "%$LogPath%\var\var_Last_Search_N_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	
+	
+	:: Munge DN file
+	IF EXIST "%$LogPath%\var\var_Last_Search_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_DN_munge.txt"
+	type "%$LogPath%\var\var_Last_Search_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_DN.txt"	
+	
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Verbose Output: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"	
+
+	:: Detailed Output
+	if NOT "%$SESSION_USER%"=="%$DOMAIN_USER%" GoTo jumpSUFLL
+	:: Session user is a domain user
+	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr name cn userPrincipalName %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr sn givenName %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr displayName %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo User DN: %%N >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (		
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Organization Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr company %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr department %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr title %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr description %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr manager %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo Contact Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr mail %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr telephoneNumber %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo Location Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr physicalDeliveryOfficeName streetAddress l st postalCode co %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	echo Details: >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr * %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%")
+	)
+	GoTo jumpSUFLO
+:jumpSUFLL
+	:: Session user is a local user
+	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr name cn userPrincipalName %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr sn givenName %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr displayName %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo User DN: %%N >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (		
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Organization Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr company %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr department %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr title %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr description %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr manager %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo Contact Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr mail %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr telephoneNumber %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo Location Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr physicalDeliveryOfficeName streetAddress l st postalCode co %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	echo Details: >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr * %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%")
+	)	
+
+:jumpSUFLO
+	call :subTLT
+	echo Total Search Time: %$TOTAL_LAPSE_TIME%
+	echo Total Search Time: %$TOTAL_LAPSE_TIME% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo End search: %DATE% %Time% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	IF %$LAST_SEARCH_COUNT% EQU 0 @powershell Write-Host "Nothing found! Try again with broader wildcard" -ForegroundColor Red
+	IF %$LAST_SEARCH_COUNT% EQU 0 GoTo skipSUFL
+	:: Search counter increment
+	Call :fSC
+	:: Open log files
+	@explorer "%$LogPath%\%$LAST_SEARCH_LOG%"
+	type "%$LogPath%\%$LAST_SEARCH_LOG%" >> "%$LogPath%\%$SEARCH_SESSION_LOG%"
+
+:skipSUFL
+	echo Search User Again?
+	Choice /c YN /m "[Y]es or [N]o":
+	IF %ERRORLEVEL% EQU 2 GoTo Search
+	IF %ERRORLEVEL% EQU 1 GoTo SUFL
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+:SUDN
+	:: Search User display name
+	taskkill /F /FI "WINDOWTITLE eq %$LAST_SEARCH_LOG% - Notepad" 2>nul 1>nul
+	SET $LAST_SEARCH_ATTRIBUTE=DisplayName
+	call :SM
+	SET $SEARCH_KEY_USER_DIPLAYNAME=	
+	@powershell Write-Host "DisplayName" -ForegroundColor Blue
+	@powershell Write-Host "Can use "*" wildcard for search." -ForegroundColor Gray
+	@powershell Write-Host "If left blank, will abort" -ForegroundColor Red
+	SET /P $SEARCH_KEY_USER_DIPLAYNAME=User DisplayName search key:
+	IF NOT DEFINED $SEARCH_KEY_USER_DIPLAYNAME GoTo SUDN
+	call :SM
+	echo Selected {%$SEARCH_KEY_USER_DIPLAYNAME%} as DisplayName search key.
+	@powershell Write-Host "Searching..." -ForegroundColor DarkYellow
+	:: Start Elapse Time
+	call :subSET
+	IF EXIST "%$LogPath%\%$LAST_SEARCH_LOG%" DEL /Q "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Start search %DATE% %Time% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo UTC: %$UTC% %$UTC_STANDARD_NAME% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Search Type: %$LAST_SEARCH_TYPE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Search Attribute: %$LAST_SEARCH_ATTRIBUTE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Search Key %$LAST_SEARCH_ATTRIBUTE%: %$SEARCH_KEY_USER_DIPLAYNAME% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Search AD Root: %$AD_BASE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Search AD Scope: %$AD_SCOPE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Domain Controller: %$DC% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Domain: %$DOMAIN% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	REM If Forestroot, then searches GC Global Catalog.
+	set "$AD_SERVER_SEARCH=-s %$DC%.%$DOMAIN%" 
+	if %$AD_BASE%==forestroot SET "$AD_SERVER_SEARCH=-gc"	
+	if %$DEGUB_MODE% EQU 1 CALL :fVarD
+	if %$SORTED% EQU 1 GoTo jumpSUDNS
+	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(displayName=%$SEARCH_KEY_USER_DIPLAYNAME%))" -attr displayName name distinguishedName %$AD_SERVER_SEARCH% > "%$LogPath%\var\var_Last_Search_N_DN.txt") ELSE (
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(displayName=%$SEARCH_KEY_USER_DIPLAYNAME%))" -attr displayName name distinguishedName %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% > "%$LogPath%\var\var_Last_Search_N_DN.txt"
+	)
+	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(displayName=%$SEARCH_KEY_USER_DIPLAYNAME%))" -attr name %$AD_SERVER_SEARCH% > "%$LogPath%\var\var_Last_Search_N.txt") ELSE (
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(displayName=%$SEARCH_KEY_USER_DIPLAYNAME%))" -attr name %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% > "%$LogPath%\var\var_Last_Search_N.txt"
+	)
+	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(displayName=%$SEARCH_KEY_USER_DIPLAYNAME%))" -attr distinguishedName %$AD_SERVER_SEARCH% > "%$LogPath%\var\var_Last_Search_DN.txt") ELSE (
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(displayName=%$SEARCH_KEY_USER_DIPLAYNAME%))" -attr distinguishedName %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% > "%$LogPath%\var\var_Last_Search_DN.txt"
+	)	
+	if %$SORTED% NEQ 1 GoTo skipSUDNS
+:jumpSUDNS
+	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(displayName=%$SEARCH_KEY_USER_DIPLAYNAME%))" -attr displayName name distinguishedName %$AD_SERVER_SEARCH% | sort > "%$LogPath%\var\var_Last_Search_N_DN.txt") ELSE (
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(displayName=%$SEARCH_KEY_USER_DIPLAYNAME%))" -attr displayName name distinguishedName %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% | sort > "%$LogPath%\var\var_Last_Search_N_DN.txt"
+	)
+	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(displayName=%$SEARCH_KEY_USER_DIPLAYNAME%))" -attr name %$AD_SERVER_SEARCH% | sort > "%$LogPath%\var\var_Last_Search_N.txt") ELSE (
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(displayName=%$SEARCH_KEY_USER_DIPLAYNAME%))" -attr name %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% | sort > "%$LogPath%\var\var_Last_Search_N.txt"
+	)
+	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(displayName=%$SEARCH_KEY_USER_DIPLAYNAME%))" -attr distinguishedName %$AD_SERVER_SEARCH% | sort > "%$LogPath%\var\var_Last_Search_DN.txt") ELSE (
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(displayName=%$SEARCH_KEY_USER_DIPLAYNAME%))" -attr distinguishedName %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% | sort > "%$LogPath%\var\var_Last_Search_DN.txt"
+	)	
+
+:skipSUDNS
+	:: Main output
+	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\var\var_Last_Search_Count.txt"
+	:: remove leading space
+	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\var\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\var\var_Last_Search_Count.txt"
+	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\var\var_Last_Search_Count.txt"
+	echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Number of search results: %$LAST_SEARCH_COUNT%	
+	IF %$LAST_SEARCH_COUNT% EQU 0 GoTo jumpSUDNO
+	@powershell Write-Host "Processing..." -ForegroundColor DarkYellow
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo DisplayName				Name			DistinguishedName^(DN^): >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	:: Munge N_DN file
+	IF EXIST "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
+	type "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_N_DN.txt"
+	type "%$LogPath%\var\var_Last_Search_N_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	:: Munge DN file
+	IF EXIST "%$LogPath%\var\var_Last_Search_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_DN_munge.txt"
+	type "%$LogPath%\var\var_Last_Search_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_DN.txt"	
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Verbose Output: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"	
+	:: Detailed Output
+	if NOT "%$SESSION_USER%"=="%$DOMAIN_USER%" GoTo jumpSUDNL
+	:: Session user is a domain user
+	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr name cn userPrincipalName %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr sn givenName %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr displayName %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo User DN: %%N >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (		
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Organization Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr company %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr department %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr title %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr description %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr manager %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo Contact Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr mail %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr telephoneNumber %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo Location Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr physicalDeliveryOfficeName streetAddress l st postalCode co %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	echo Details: >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr * %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%")
+	)
+	GoTo jumpSUDNO
+:jumpSUDNL
+	:: Session user is a local user
+	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr name cn userPrincipalName %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr sn givenName %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr displayName %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo User DN: %%N >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (		
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Organization Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr company %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr department %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr title %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr description %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr manager %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo Contact Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr mail %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr telephoneNumber %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo Location Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr physicalDeliveryOfficeName streetAddress l st postalCode co %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	echo Details: >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr * %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%")
+	)	
+
+:jumpSUDNO
+	call :subTLT
+	echo Total Search Time: %$TOTAL_LAPSE_TIME%
+	echo Total Search Time: %$TOTAL_LAPSE_TIME% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo End search: %DATE% %Time% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	IF %$LAST_SEARCH_COUNT% EQU 0 @powershell Write-Host "Nothing found! Try again with broader wildcard" -ForegroundColor Red
+	IF %$LAST_SEARCH_COUNT% EQU 0 GoTo skipSUDN
+	:: Search counter increment
+	Call :fSC
+	:: Open log files
+	@explorer "%$LogPath%\%$LAST_SEARCH_LOG%"
+	type "%$LogPath%\%$LAST_SEARCH_LOG%" >> "%$LogPath%\%$SEARCH_SESSION_LOG%"
+
+:skipSUDN
+	echo Search User Again?
+	Choice /c YN /m "[Y]es or [N]o":
+	IF %ERRORLEVEL% EQU 2 GoTo Search
+	IF %ERRORLEVEL% EQU 1 GoTo SUDN
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+:SUCA
+	:: Search User Custom Attributes
+	::	Close previous Windows
+	taskkill /F /FI "WINDOWTITLE eq %$LAST_SEARCH_LOG% - Notepad" 2> nul 1> nul
+	
+	SET $SEARCH_TYPE=user
+	SET $LAST_SEARCH_ATTRIBUTE=Custom Attribe
+	SET "$ATTRIBUTES_USER=cn department description directReports displayName email extensionAttribute# givenName l mail mailNickname manager memberOf name physicalDeliveryOfficeName postalCode userPrincipalName sn st title telephoneNumber"
+	call :SM
+	@powershell Write-Host "Custom-Attribute:" -ForegroundColor Gray
+	@powershell Write-Host "cn department description directReports displayName email extensionAttribute# givenName l mail mailNickname manager memberOf name physicalDeliveryOfficeName postalCode userPrincipalName sn st title telephoneNumber" -ForegroundColor Blue
+	echo ----------------------------------------
+	echo.
+	:: Choose custom user attribute
+	@powershell Write-Host "Choose one user attribute to search against:" -ForegroundColor Gray
+	@powershell Write-Host "name will automatically be used" -ForegroundColor Gray
+	SET $FILTER=^(objectClass=%$SEARCH_TYPE%^)
+	SET /P $ATTRIBUTES_USER=User attribute:
+	echo %$ATTRIBUTES_USER% | FIND /I "%$ATTRIBUTES_USER%"
+	SET $USER_ATT_VALID=%ERRORLEVEL%
+	IF %$USER_ATT_VALID% NEQ 0 (ECHO NOT VALID!) & (timeout /t 10) & (GoTo SUCA)
+	:: Choose custom attribute search key
+	call :SM
+	echo Custom User Attribute: %$ATTRIBUTES_USER%
+	@powershell Write-Host "Choose a search key:" -ForegroundColor Gray
+	@powershell Write-Host "Leave blank for wildcard *" -ForegroundColor Magenta
+	SET $USER_ATTR_CUSTOM_SEARCH_KEY=*
+	SET /P $USER_ATTR_CUSTOM_SEARCH_KEY=User %$ATTRIBUTES_USER% search key:
+	:: Choose name attribute search key*
+	call :SM
+	@powershell Write-Host "Attribute: name" -ForegroundColor Blue
+	@powershell Write-Host "Choose a search key:" -ForegroundColor Gray
+	@powershell Write-Host "Leave blank for wildcard *" -ForegroundColor Magenta
+	SET $USER_ATTR_NAME_SEARCH_KEY=*
+	SET /P $USER_ATTR_NAME_SEARCH_KEY=User name search key:
+	:: Console Display		
+	call :SM	
+	@powershell Write-Host "Search parameters:" -ForegroundColor Gray
+	echo Attribute		Operator  Search Key
+	echo Name			[=]	%$USER_ATTR_NAME_SEARCH_KEY%
+	echo %$ATTRIBUTES_USER%	[=]	%$USER_ATTR_CUSTOM_SEARCH_KEY%
+	:: Make filter
+	SET $FILTER=%$FILTER%^(name=%$USER_ATTR_NAME_SEARCH_KEY%^)^(%$ATTRIBUTES_USER%=%$USER_ATTR_CUSTOM_SEARCH_KEY%^)
+	echo.
+	@powershell Write-Host "Searching..." -ForegroundColor DarkYellow
+	:: Start Elapse Time
+	call :subSET	
+	IF EXIST "%$LogPath%\%$LAST_SEARCH_LOG%" DEL /Q "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Start search %DATE% %Time% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo UTC: %$UTC% %$UTC_STANDARD_NAME% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Search Type: %$LAST_SEARCH_TYPE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo  name Attribute: [=]	%$USER_ATTR_NAME_SEARCH_KEY% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo  %$ATTRIBUTES_USER% Attribute: [=]	%$USER_ATTR_CUSTOM_SEARCH_KEY% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Search AD Root: %$AD_BASE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Search AD Scope: %$AD_SCOPE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Domain Controller: %$DC% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Domain: %$DOMAIN% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	REM If Forestroot, then searches GC Global Catalog.
+	set "$AD_SERVER_SEARCH=-s %$DC%.%$DOMAIN%" 
+	if %$AD_BASE%==forestroot SET "$AD_SERVER_SEARCH=-gc"
+	if %$DEGUB_MODE% EQU 1 CALL :fVarD
+	if %$SORTED% EQU 1 GoTo jumpSUCAS
+	:: Search
+	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&%$FILTER%)" -attr %$ATTRIBUTES_USER% name displayName -limit %$sLimit% %$AD_SERVER_SEARCH%  > "%$LogPath%\var\var_Last_Search_N_DN.txt") ELSE (	
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&%$FILTER%)" -attr %$ATTRIBUTES_USER% name displayName -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD%  > "%$LogPath%\var\var_Last_Search_N_DN.txt"
+		)
+
+	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&%$FILTER%)" -attr distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH%  > "%$LogPath%\var\var_Last_Search_DN.txt") ELSE (	
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&%$FILTER%)" -attr distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD%  > "%$LogPath%\var\var_Last_Search_DN.txt"
+		)	
+	if %$SORTED% NEQ 1 GoTo skipSUCAS
+		
+:jumpSUCAS
+
+	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&%$FILTER%)" -attr %$ATTRIBUTES_USER% name displayName -limit %$sLimit% %$AD_SERVER_SEARCH% | sort > "%$LogPath%\var\var_Last_Search_N_DN.txt") ELSE (	
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&%$FILTER%)" -attr %$ATTRIBUTES_USER% name displayName -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% | sort > "%$LogPath%\var\var_Last_Search_N_DN.txt"
+		)
+
+	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&%$FILTER%)" -attr distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% | sort > "%$LogPath%\var\var_Last_Search_DN.txt") ELSE (	
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&%$FILTER%)" -attr distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% | sort > "%$LogPath%\var\var_Last_Search_DN.txt"
+		)	
+:skipSUCAS
+
+	:: Main output
+	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\var\var_Last_Search_Count.txt"
+	:: remove leading space
+	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\var\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\var\var_Last_Search_Count.txt"
+	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\var\var_Last_Search_Count.txt"
+	echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Number of search results: %$LAST_SEARCH_COUNT%	
+	IF %$LAST_SEARCH_COUNT% EQU 0 GoTo jumpSUCAL
+	@powershell Write-Host "Processing..." -ForegroundColor DarkYellow
+	IF EXIST "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
+	type "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_N_DN.txt"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Attribute Summary: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo %$ATTRIBUTES_USER%	Name		displayName >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	:: Munge N_DN file
+	IF EXIST "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "Name" "%$LogPath%\var\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
+	type "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_N_DN.txt"
+	type "%$LogPath%\var\var_Last_Search_N_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"	
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Verbose Output: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	:: Detailed Output
+	:: Munge DN file
+	IF EXIST "%$LogPath%\var\var_Last_Search_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_DN_munge.txt"
+	type "%$LogPath%\var\var_Last_Search_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_DN.txt"
+	:: Check User session
+	if NOT "%$SESSION_USER%"=="%$DOMAIN_USER%" GoTo jumpSUCAO
+	:: Session user is a domain user
+	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr name cn userPrincipalName %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr sn givenName %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr displayName %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo User DN: %%N >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (		
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Organization Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr company %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr department %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr title %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr description %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr manager %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo Contact Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr mail %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr telephoneNumber %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo Location Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr physicalDeliveryOfficeName streetAddress l st postalCode co %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	echo Details: >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr * %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%")
+	)
+	GoTo jumpSUCAO
+:jumpSUCAL
+	:: Session user is a local user
+	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr name cn userPrincipalName %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr sn givenName %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr displayName %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo User DN: %%N >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (		
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Organization Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr company %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr department %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr title %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr description %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr manager %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo Contact Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr mail %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr telephoneNumber %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo Location Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr physicalDeliveryOfficeName streetAddress l st postalCode co %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	echo Details: >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr * %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%")
+	)	
+
+:jumpSUCAO
+	call :subTLT
+	echo Total Search Time: %$TOTAL_LAPSE_TIME%
+	echo Total Search Time: %$TOTAL_LAPSE_TIME% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo End search: %DATE% %Time% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	IF %$LAST_SEARCH_COUNT% EQU 0 @powershell Write-Host "Nothing found! Try again with broader wildcard" -ForegroundColor Red
+	IF %$LAST_SEARCH_COUNT% EQU 0 GoTo skipSUCA
+	:: Search counter increment
+	Call :fSC
+	:: Open log files
+	@explorer "%$LogPath%\%$LAST_SEARCH_LOG%"
+	type "%$LogPath%\%$LAST_SEARCH_LOG%" >> "%$LogPath%\%$SEARCH_SESSION_LOG%"
+
+:skipSUCA
+	echo Search User Again?
+	Choice /c YN /m "[Y]es or [N]o":
+	IF %ERRORLEVEL% EQU 2 GoTo sUser
+	IF %ERRORLEVEL% EQU 1 GoTo SUCA
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+:SUG
+	:: Search User Global
+	call :SM
+	echo User global search using:
+	echo.
+	echo [1] Inactive
+	echo [2] StalePassword
+	echo [3] Disabled
+	echo [4] Abort
+	echo.
+	Choice /c 1234
+	echo.
+	If ERRORLevel 4 GoTo Search
+	If ERRORLevel 3 GoTo SUGD
+	If ERRORLevel 2 GoTo SUGS
+	If ERRORLevel 1 GoTo SUGI
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+:SUGI
+	:: Search User Global Inactive
+	taskkill /F /FI "WINDOWTITLE eq %$LAST_SEARCH_LOG% - Notepad" 2>nul 1>nul
+	SET $LAST_SEARCH_ATTRIBUTE=Inactive
+	call :SM
+	@powershell Write-Host "Inactive" -ForegroundColor Blue	
+	@powershell Write-Host "Choose n number of weeks" -ForegroundColor Gray
+	@powershell Write-Host "If left blank, will default to 0" -ForegroundColor Magenta
+	SET /P $SEARCH_INACTIVE_KEY=%$LAST_SEARCH_ATTRIBUTE% n weeks:
+	IF NOT DEFINED $SEARCH_INACTIVE_KEY=0
+	call :SM
+	@powershell Write-Host "Attribute: Name" -ForegroundColor Blue	
+	@powershell Write-Host "Can use wildcard *" -ForegroundColor Gray
+	@powershell Write-Host "If left blank, will default to *" -ForegroundColor Magenta
+	SET $SEARCH_NAME_KEY=*
+	SET /P $SEARCH_NAME_KEY=name search key:
+	call :SM
+	echo Selected {%$SEARCH_INACTIVE_KEY%} as inactive search key.
+	echo Selected {%$SEARCH_NAME_KEY%} as name search key.
+	@powershell Write-Host "Searching..." -ForegroundColor DarkYellow
+	:: Start Elapse Time
+	call :subSET
+	IF EXIST "%$LogPath%\%$LAST_SEARCH_LOG%" DEL /Q "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Start search %DATE% %Time% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo UTC: %$UTC% %$UTC_STANDARD_NAME% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Search Type: %$LAST_SEARCH_TYPE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Search Attribute: %$LAST_SEARCH_ATTRIBUTE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Attribute %$LAST_SEARCH_ATTRIBUTE% key: %$SEARCH_INACTIVE_KEY% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Attribute Name key: %$SEARCH_NAME_KEY% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Search AD Root: %$AD_BASE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Search AD Scope: %$AD_SCOPE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Domain Controller: %$DC% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Domain: %$DOMAIN% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	REM If Forestroot, then searches GC Global Catalog.
+	set "$AD_SERVER_SEARCH=-s %$DC%.%$DOMAIN%" 
+	if %$AD_BASE%==forestroot SET "$AD_SERVER_SEARCH=-gc"	
+	if %$DEGUB_MODE% EQU 1 CALL :fVarD
+	if %$SORTED% EQU 1 GoTo jumpSUGIS
+	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_NAME_KEY%" -inactive %$SEARCH_INACTIVE_KEY% -limit %$sLimit% %$AD_SERVER_SEARCH%  > "%$LogPath%\var\var_Last_Search_N.txt") ELSE (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_NAME_KEY%" -inactive %$SEARCH_INACTIVE_KEY% -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% > "%$LogPath%\var\var_Last_Search_N.txt"
+		)
+	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_NAME_KEY%" -inactive %$SEARCH_INACTIVE_KEY% -limit %$sLimit% %$AD_SERVER_SEARCH% > "%$LogPath%\var\var_Last_Search_DN.txt") ELSE (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_NAME_KEY%" -inactive %$SEARCH_INACTIVE_KEY% -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% > "%$LogPath%\var\var_Last_Search_DN.txt"
+		)	
+	if %$SORTED% NEQ 1 GoTo skipSUGIS
+:jumpSUGIS
+	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_NAME_KEY%" -inactive %$SEARCH_INACTIVE_KEY% -limit %$sLimit% %$AD_SERVER_SEARCH% | sort  > "%$LogPath%\var\var_Last_Search_N.txt") ELSE (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_NAME_KEY%" -inactive %$SEARCH_INACTIVE_KEY% -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% | sort > "%$LogPath%\var\var_Last_Search_N.txt"
+		)
+	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_NAME_KEY%" -inactive %$SEARCH_INACTIVE_KEY% -limit %$sLimit% %$AD_SERVER_SEARCH% | sort > "%$LogPath%\var\var_Last_Search_DN.txt") ELSE (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_NAME_KEY%" -inactive %$SEARCH_INACTIVE_KEY% -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% | sort > "%$LogPath%\var\var_Last_Search_DN.txt"
+		)	
+:skipSUGIS
+	:: Main output
+	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\var\var_Last_Search_Count.txt"
+	:: remove leading space
+	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\var\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\var\var_Last_Search_Count.txt"
+	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\var\var_Last_Search_Count.txt"
+	echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Number of search results: %$LAST_SEARCH_COUNT%	
+	IF %$LAST_SEARCH_COUNT% EQU 0 GoTo jumpSUGIO
+	@powershell Write-Host "Processing..." -ForegroundColor DarkYellow
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo User Names returned: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	type "%$LogPath%\var\var_Last_Search_N.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo User Distinguisged Names: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	type "%$LogPath%\var\var_Last_Search_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"	
+	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Verbose Output: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"	
+
+	:: Detailed Output
+	if NOT "%$SESSION_USER%"=="%$DOMAIN_USER%" GoTo jumpSUGIL
+	:: Session user is a domain user
+	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr name cn %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr sn givenName %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr displayName %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo User DN: %%N >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (		
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Organization Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr company %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr department %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr title %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr description %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr manager %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo Contact Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr mail %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr telephoneNumber %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo Location Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr physicalDeliveryOfficeName streetAddress l st postalCode co %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	echo Details: >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr * %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%")
+	)
+	GoTo jumpSUGIO
+:jumpSUGIL
+	:: Session user is a local user
+	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr name cn %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr sn givenName %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr displayName %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo User DN: %%N >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (		
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Organization Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr company %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr department %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr title %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr description %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr manager %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo Contact Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr mail %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr telephoneNumber %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo Location Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr physicalDeliveryOfficeName streetAddress l st postalCode co %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	echo Details: >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr * %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%")
+	)	
+
+:jumpSUGIO
+	call :subTLT
+	echo Total Search Time: %$TOTAL_LAPSE_TIME%
+	echo Total Search Time: %$TOTAL_LAPSE_TIME% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo End search: %DATE% %Time% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	IF %$LAST_SEARCH_COUNT% EQU 0 @powershell Write-Host "Nothing found! Try again with broader wildcard" -ForegroundColor Red
+	IF %$LAST_SEARCH_COUNT% EQU 0 GoTo skipSUGI
+	:: Search counter increment
+	Call :fSC
+	:: Open log files
+	@explorer "%$LogPath%\%$LAST_SEARCH_LOG%"
+	type "%$LogPath%\%$LAST_SEARCH_LOG%" >> "%$LogPath%\%$SEARCH_SESSION_LOG%"
+
+
+:skipSUGI
+	echo Search User Again?
+	Choice /c YN /m "[Y]es or [N]o":
+	IF %ERRORLEVEL% EQU 2 GoTo Search
+	IF %ERRORLEVEL% EQU 1 GoTo SUGI
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+
+:SUGS
+	:: Search User Global StalePassword
+	taskkill /F /FI "WINDOWTITLE eq %$LAST_SEARCH_LOG% - Notepad" 2>nul 1>nul
+	SET $LAST_SEARCH_ATTRIBUTE=StalePassword
+	call :SM
+	@powershell Write-Host "Attribute: StalePassword" -ForegroundColor Blue	
+	@powershell Write-Host "Choose n number of days" -ForegroundColor Gray
+	@powershell Write-Host "If left blank, will default to 0" -ForegroundColor Magenta
+	SET /P $SEARCH_STALEPWD_KEY=%$LAST_SEARCH_ATTRIBUTE% n days:
+	IF NOT DEFINED $SEARCH_STALEPWD_KEY=0
+	call :SM
+	@powershell Write-Host "Attribute: Name" -ForegroundColor Blue	
+	@powershell Write-Host "Can use wildcard *" -ForegroundColor Gray
+	@powershell Write-Host "If left blank, will default to *" -ForegroundColor Magenta
+	SET $SEARCH_NAME_KEY=*
+	SET /P $SEARCH_NAME_KEY=name search key:
+	call :SM
+	echo Selected {%$SEARCH_STALEPWD_KEY%} as stalepassword search key.
+	echo Selected {%$SEARCH_NAME_KEY%} as name search key.
+	@powershell Write-Host "Searching..." -ForegroundColor DarkYellow
+	:: Start Elapse Time
+	call :subSET
+	IF EXIST "%$LogPath%\%$LAST_SEARCH_LOG%" DEL /Q "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Start search %DATE% %Time% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo UTC: %$UTC% %$UTC_STANDARD_NAME% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Search Type: %$LAST_SEARCH_TYPE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Search Attribute: %$LAST_SEARCH_ATTRIBUTE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Attribute %$LAST_SEARCH_ATTRIBUTE% key: %$SEARCH_STALEPWD_KEY% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Attribute Name key: %$SEARCH_NAME_KEY% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Search AD Root: %$AD_BASE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Search AD Scope: %$AD_SCOPE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Domain Controller: %$DC% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Domain: %$DOMAIN% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	REM If Forestroot, then searches GC Global Catalog.
+	set "$AD_SERVER_SEARCH=-s %$DC%.%$DOMAIN%" 
+	if %$AD_BASE%==forestroot SET "$AD_SERVER_SEARCH=-gc"	
+	if %$DEGUB_MODE% EQU 1 CALL :fVarD
+	if %$SORTED% EQU 1 GoTo jumpSUGSS
+	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_NAME_KEY%" -stalepwd %$SEARCH_STALEPWD_KEY% -limit %$sLimit% %$AD_SERVER_SEARCH%  > "%$LogPath%\var\var_Last_Search_N.txt") ELSE (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_NAME_KEY%" -stalepwd %$SEARCH_STALEPWD_KEY% -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% > "%$LogPath%\var\var_Last_Search_N.txt"
+		)
+	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_NAME_KEY%" -stalepwd %$SEARCH_STALEPWD_KEY% -limit %$sLimit% %$AD_SERVER_SEARCH% > "%$LogPath%\var\var_Last_Search_DN.txt") ELSE (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_NAME_KEY%" -stalepwd %$SEARCH_STALEPWD_KEY% -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% > "%$LogPath%\var\var_Last_Search_DN.txt"
+		)	
+	if %$SORTED% NEQ 1 GoTo skipSUGSS
+:jumpSUGSS
+	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_NAME_KEY%" -stalepwd %$SEARCH_STALEPWD_KEY% -limit %$sLimit% %$AD_SERVER_SEARCH% | sort  > "%$LogPath%\var\var_Last_Search_N.txt") ELSE (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_NAME_KEY%" -stalepwd %$SEARCH_STALEPWD_KEY% -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% | sort > "%$LogPath%\var\var_Last_Search_N.txt"
+		)
+	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_NAME_KEY%" -stalepwd %$SEARCH_STALEPWD_KEY% -limit %$sLimit% %$AD_SERVER_SEARCH% | sort > "%$LogPath%\var\var_Last_Search_DN.txt") ELSE (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_NAME_KEY%" -stalepwd %$SEARCH_STALEPWD_KEY% -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% | sort > "%$LogPath%\var\var_Last_Search_DN.txt"
+		)	
+:skipSUGSS
+	:: Main output
+	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\var\var_Last_Search_Count.txt"
+	:: remove leading space
+	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\var\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\var\var_Last_Search_Count.txt"
+	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\var\var_Last_Search_Count.txt"
+	echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Number of search results: %$LAST_SEARCH_COUNT%	
+	IF %$LAST_SEARCH_COUNT% EQU 0 GoTo jumpSUGSO
+	@powershell Write-Host "Processing..." -ForegroundColor DarkYellow	
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo User Names returned: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	type "%$LogPath%\var\var_Last_Search_N.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo User Distinguisged Names: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	type "%$LogPath%\var\var_Last_Search_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"	
+	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Verbose Output: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"	
+
+	:: Detailed Output
+	if NOT "%$SESSION_USER%"=="%$DOMAIN_USER%" GoTo jumpSUGSL
+	:: Session user is a domain user
+	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr name cn %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr sn givenName %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr displayName %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo User DN: %%N >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (		
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Organization Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr company %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr department %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr title %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr description %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr manager %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo Contact Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr mail %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr telephoneNumber %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo Location Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr physicalDeliveryOfficeName streetAddress l st postalCode co %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	echo Details: >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr * %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%")
+	)
+	GoTo jumpSUGSO
+:jumpSUGSL
+	:: Session user is a local user
+	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr name cn %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr sn givenName %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr displayName %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo User DN: %%N >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (		
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Organization Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr company %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr department %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr title %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr description %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr manager %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo Contact Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr mail %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr telephoneNumber %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo Location Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr physicalDeliveryOfficeName streetAddress l st postalCode co %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	echo Details: >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr * %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%")
+	)	
+
+:jumpSUGSO
+	call :subTLT
+	echo Total Search Time: %$TOTAL_LAPSE_TIME%
+	echo Total Search Time: %$TOTAL_LAPSE_TIME% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo End search: %DATE% %Time% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	IF %$LAST_SEARCH_COUNT% EQU 0 @powershell Write-Host "Nothing found! Try again with broader wildcard" -ForegroundColor Red
+	IF %$LAST_SEARCH_COUNT% EQU 0 GoTo skipSUGS
+	:: Search counter increment
+	Call :fSC
+	:: Open log files
+	@explorer "%$LogPath%\%$LAST_SEARCH_LOG%"
+	type "%$LogPath%\%$LAST_SEARCH_LOG%" >> "%$LogPath%\%$SEARCH_SESSION_LOG%"
+
+
+:skipSUGS
+	echo Search User Again?
+	Choice /c YN /m "[Y]es or [N]o":
+	IF %ERRORLEVEL% EQU 2 GoTo Search
+	IF %ERRORLEVEL% EQU 1 GoTo SUGS
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::	
+
+	
+:SUGD
+	:: Search User Global Disabled
+	taskkill /F /FI "WINDOWTITLE eq %$LAST_SEARCH_LOG% - Notepad" 2>nul 1>nul
+	SET $LAST_SEARCH_ATTRIBUTE=Disabled
+	call :SM
+	@powershell Write-Host "Attribute: Name" -ForegroundColor Blue	
+	@powershell Write-Host "Can use wildcard *" -ForegroundColor Gray
+	@powershell Write-Host "If left blank, will default to *" -ForegroundColor Magenta
+	SET $SEARCH_NAME_KEY=*
+	SET /P $SEARCH_NAME_KEY=name search key:
+	call :SM
+	echo Selected {%$SEARCH_NAME_KEY%} as name search key.
+	@powershell Write-Host "Searching..." -ForegroundColor DarkYellow
+	:: Start Elapse Time
+	call :subSET
+	IF EXIST "%$LogPath%\%$LAST_SEARCH_LOG%" DEL /Q "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Start search %DATE% %Time% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo UTC: %$UTC% %$UTC_STANDARD_NAME% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Search Type: %$LAST_SEARCH_TYPE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Search Attribute: %$LAST_SEARCH_ATTRIBUTE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Attribute Name key: %$SEARCH_NAME_KEY% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Search AD Root: %$AD_BASE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Search AD Scope: %$AD_SCOPE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Domain Controller: %$DC% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Domain: %$DOMAIN% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	REM If Forestroot, then searches GC Global Catalog.
+	set "$AD_SERVER_SEARCH=-s %$DC%.%$DOMAIN%" 
+	if %$AD_BASE%==forestroot SET "$AD_SERVER_SEARCH=-gc"	
+	if %$DEGUB_MODE% EQU 1 CALL :fVarD
+	if %$SORTED% EQU 1 GoTo jumpSUGDS
+	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_NAME_KEY%" -disabled -limit %$sLimit% %$AD_SERVER_SEARCH%  > "%$LogPath%\var\var_Last_Search_N.txt") ELSE (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_NAME_KEY%" -disabled -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% > "%$LogPath%\var\var_Last_Search_N.txt"
+		)
+	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_NAME_KEY%" -disabled -limit %$sLimit% %$AD_SERVER_SEARCH% > "%$LogPath%\var\var_Last_Search_DN.txt") ELSE (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_NAME_KEY%" -disabled -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% > "%$LogPath%\var\var_Last_Search_DN.txt"
+		)	
+	if %$SORTED% NEQ 1 GoTo skipSUGDS
+:jumpSUGDS
+	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_NAME_KEY%" -disabled -limit %$sLimit% %$AD_SERVER_SEARCH% | sort  > "%$LogPath%\var\var_Last_Search_N.txt") ELSE (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_NAME_KEY%" -disabled -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% | sort > "%$LogPath%\var\var_Last_Search_N.txt"
+		)
+	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_NAME_KEY%" -disabled -limit %$sLimit% %$AD_SERVER_SEARCH% | sort > "%$LogPath%\var\var_Last_Search_DN.txt") ELSE (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_NAME_KEY%" -disabled -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% | sort > "%$LogPath%\var\var_Last_Search_DN.txt"
+		)	
+:skipSUGDS
+	:: Main output
+	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\var\var_Last_Search_Count.txt"
+	:: remove leading space
+	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\var\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\var\var_Last_Search_Count.txt"
+	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\var\var_Last_Search_Count.txt"
+	echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Number of search results: %$LAST_SEARCH_COUNT%	
+	IF %$LAST_SEARCH_COUNT% EQU 0 GoTo jumpSUGDO
+	@powershell Write-Host "Processing..." -ForegroundColor DarkYellow	
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo User Names returned: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	type "%$LogPath%\var\var_Last_Search_N.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo User Distinguisged Names: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	type "%$LogPath%\var\var_Last_Search_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"	
+	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Verbose Output: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"	
+
+	:: Detailed Output
+	if NOT "%$SESSION_USER%"=="%$DOMAIN_USER%" GoTo jumpSUGDL
+	:: Session user is a domain user
+	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr name cn %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr sn givenName %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr displayName %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo User DN: %%N >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (		
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Organization Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr company %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr department %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr title %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr description %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr manager %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo Contact Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr mail %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr telephoneNumber %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo Location Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr physicalDeliveryOfficeName streetAddress l st postalCode co %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	echo Details: >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr * %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%")
+	)
+	GoTo jumpSUGDO
+:jumpSUGDL
+	:: Session user is a local user
+	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr name cn %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr sn givenName %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr displayName %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo User DN: %%N >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (		
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Organization Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr company %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr department %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr title %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr description %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr manager %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo Contact Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr mail %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr telephoneNumber %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo Location Information: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr physicalDeliveryOfficeName streetAddress l st postalCode co %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (	
+	echo Details: >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(distinguishedName=%%~N))" -attr * %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%")
+	)	
+
+:jumpSUGDO
+	call :subTLT
+	echo Total Search Time: %$TOTAL_LAPSE_TIME%
+	echo Total Search Time: %$TOTAL_LAPSE_TIME% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo End search: %DATE% %Time% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	IF %$LAST_SEARCH_COUNT% EQU 0 @powershell Write-Host "Nothing found! Try again with broader wildcard" -ForegroundColor Red
+	IF %$LAST_SEARCH_COUNT% EQU 0 GoTo skipSUGD
+	:: Search counter increment
+	Call :fSC
+	:: Open log files
+	@explorer "%$LogPath%\%$LAST_SEARCH_LOG%"
+	type "%$LogPath%\%$LAST_SEARCH_LOG%" >> "%$LogPath%\%$SEARCH_SESSION_LOG%"
+
+
+:skipSUGD
+	echo Search User Again?
+	Choice /c YN /m "[Y]es or [N]o":
+	IF %ERRORLEVEL% EQU 2 GoTo Search
+	IF %ERRORLEVEL% EQU 1 GoTo SUGD	
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :sGroup
@@ -643,7 +1964,7 @@ GoTo SkipSUL
 	echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Number of search results: %$LAST_SEARCH_COUNT%
 	IF %$LAST_SEARCH_COUNT% EQU 0 GoTo jumpSGL
-	echo Processing...
+	@powershell Write-Host "Processing..." -ForegroundColor DarkYellow
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Group Names returned: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	type "%$LogPath%\var\var_Last_Search_N.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -764,7 +2085,7 @@ GoTo jumpSGL
 	echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Number of search results: %$LAST_SEARCH_COUNT%
 	IF %$LAST_SEARCH_COUNT% EQU 0 GoTo jumpSGDL
-	echo Processing...
+	@powershell Write-Host "Processing..." -ForegroundColor DarkYellow
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Group Names returned: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	type "%$LogPath%\var\var_Last_Search_N.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -888,7 +2209,7 @@ GoTo jumpSGDL
 	echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Number of search results: %$LAST_SEARCH_COUNT%
 	IF %$LAST_SEARCH_COUNT% EQU 0 GoTo jumpSGDNL
-	echo Processing...
+	@powershell Write-Host "Processing..." -ForegroundColor DarkYellow
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Group Names returned: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	type "%$LogPath%\var\var_Last_Search_N.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -1034,7 +2355,7 @@ GoTo jumpSGDNL
 	echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Number of search results: %$LAST_SEARCH_COUNT%	
 	IF %$LAST_SEARCH_COUNT% EQU 0 GoTo jumpSCNL
-	echo Processing...	
+	@powershell Write-Host "Processing..." -ForegroundColor DarkYellow	
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Computer Names returned: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	type "%$LogPath%\var\var_Last_Search_N.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -1196,7 +2517,7 @@ GoTo jumpSGDNL
 	echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Number of search results: %$LAST_SEARCH_COUNT%	
 	IF %$LAST_SEARCH_COUNT% EQU 0 GoTo jumpSCDL
-	echo Processing...	
+	@powershell Write-Host "Processing..." -ForegroundColor DarkYellow	
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Computer Names returned: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	type "%$LogPath%\var\var_Last_Search_N.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -1332,7 +2653,7 @@ GoTo jumpSGDNL
 	echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Number of search results: %$LAST_SEARCH_COUNT%	
 	IF %$LAST_SEARCH_COUNT% EQU 0 GoTo jumpSCIL
-	echo Processing...	
+	@powershell Write-Host "Processing..." -ForegroundColor DarkYellow	
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Computer Names returned: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	type "%$LogPath%\var\var_Last_Search_N.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -1467,7 +2788,7 @@ GoTo jumpSGDNL
 	echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Number of search results: %$LAST_SEARCH_COUNT%	
 	IF %$LAST_SEARCH_COUNT% EQU 0 GoTo jumpSCSL
-	echo Processing...	
+	@powershell Write-Host "Processing..." -ForegroundColor DarkYellow	
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Computer Names returned: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	type "%$LogPath%\var\var_Last_Search_N.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -1625,7 +2946,7 @@ GoTo jumpSGDNL
 	echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Number of search results: %$LAST_SEARCH_COUNT%	
 	IF %$LAST_SEARCH_COUNT% EQU 0 GoTo jumpSCOSL
-	echo Processing...	
+	@powershell Write-Host "Processing..." -ForegroundColor DarkYellow	
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Computer Names and DN returned: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	type "%$LogPath%\var\var_Last_Search_N_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"	
@@ -1838,7 +3159,7 @@ GoTo jumpSGDNL
 	echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Number of search results: %$LAST_SEARCH_COUNT%	
 	IF %$LAST_SEARCH_COUNT% EQU 0 GoTo jumpSCTSL
-	echo Processing...
+	@powershell Write-Host "Processing..." -ForegroundColor DarkYellow
 	
 	IF EXIST "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
 	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
@@ -2012,7 +3333,7 @@ GoTo jumpSGDNL
 	echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Number of search results: %$LAST_SEARCH_COUNT%	
 	IF %$LAST_SEARCH_COUNT% EQU 0 GoTo jumpSCLCL
-	echo Processing...
+	@powershell Write-Host "Processing..." -ForegroundColor DarkYellow
 	IF EXIST "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
 	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
 	type "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_N_DN.txt"
@@ -2092,11 +3413,12 @@ GoTo jumpSGDNL
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :SCMA
+
 	:: Search Computer Multiple Attributes
 	::	Close previous Windows
 	taskkill /F /FI "WINDOWTITLE eq %$LAST_SEARCH_LOG% - Notepad" 2> nul 1> nul
 	SET $LAST_SEARCH_ATTRIBUTE=Multiple
-	SET $SEARCH_KEY_PC_NAME=
+	SET $SEARCH_TYPE=COMPUTER
 	SET "$ATTRIBUTES_COMPUTER=name cn description displayName whenCreated whenChanged logonCount lastLogonTimestamp objectSid dNSHostName operatingSystem operatingSystemVersion operatingSystemServicePack managedBy"
 	call :SM
 	@powershell Write-Host "Multiple-meta:" -ForegroundColor Gray
@@ -2114,8 +3436,8 @@ GoTo jumpSGDNL
 		echo Attribute: %%P) & (
 		call :subOperator %%P) & (
 		@powershell Write-Host "Leave blank for wildcard *" -ForegroundColor Magenta) & (
-		SET $COMPUTER_ATTR_%%P=*) & (
-		SET /P $COMPUTER_ATTR_%%P=Computer %%P search key: ) & (
+		SET $ATTR_%%P=*) & (
+		SET /P $ATTR_%%P=Computer %%P search key: ) & (
 		SET /a $COUNTER+=1) & (
 		GoTo subSCMA)
 	)
@@ -2125,20 +3447,20 @@ GoTo jumpSGDNL
 	:: Console Display	
 	@powershell Write-Host "Search parameters:" -ForegroundColor Gray
 	echo Attribute			Operator  Search Key
-	echo  name				[%$COMPUTER_ATTR_NAME_OPERATOR_DISPLAY%]	%$COMPUTER_ATTR_NAME%
-	echo  cn				[%$COMPUTER_ATTR_CN_OPERATOR_DISPLAY%]	%$COMPUTER_ATTR_CN%
-	echo  description			[%$COMPUTER_ATTR_DESCRIPTION_OPERATOR_DISPLAY%]	%$COMPUTER_ATTR_DESCRIPTION%
-	echo  displayname			[%$COMPUTER_ATTR_DISPLAYNAME_OPERATOR_DISPLAY%]	%$COMPUTER_ATTR_DISPLAYNAME%
-	echo  WHENCREATED			[%$COMPUTER_ATTR_WHENCREATED_OPERATOR_DISPLAY%]	%$COMPUTER_ATTR_WHENCREATED%
-	echo  WHENCHANGED			[%$COMPUTER_ATTR_WHENCHANGED_OPERATOR_DISPLAY%]	%$COMPUTER_ATTR_WHENCHANGED%
-	echo  LOGONCOUNT			[%$COMPUTER_ATTR_LOGONCOUNT_OPERATOR_DISPLAY%]	%$COMPUTER_ATTR_LOGONCOUNT%
-	echo  LASTLOGONTIMESTAMP		[%$COMPUTER_ATTR_LASTLOGONTIMESTAMP_OPERATOR_DISPLAY%]	%$COMPUTER_ATTR_LASTLOGONTIMESTAMP%
-	echo  OBJECTSID			[%$COMPUTER_ATTR_OBJECTSID_OPERATOR_DISPLAY%]	%$COMPUTER_ATTR_OBJECTSID%
-	echo  DNSHOSTNAME			[%$COMPUTER_ATTR_DNSHOSTNAME_OPERATOR_DISPLAY%]	%$COMPUTER_ATTR_DNSHOSTNAME%
-	echo  OPERATINGSYSTEM		[%$COMPUTER_ATTR_OPERATINGSYSTEM_OPERATOR_DISPLAY%]	%$COMPUTER_ATTR_OPERATINGSYSTEM%
-	echo  OPERATINGSYSTEMVERSION		[%$COMPUTER_ATTR_OPERATINGSYSTEMVERSION_OPERATOR_DISPLAY%]	%$COMPUTER_ATTR_OPERATINGSYSTEMVERSION%
-	echo  OPERATINGSYSTEMSERVICEPACK	[%$COMPUTER_ATTR_OPERATINGSYSTEMSERVICEPACK_OPERATOR_DISPLAY%]	%$COMPUTER_ATTR_OPERATINGSYSTEMSERVICEPACK%
-	echo  MANAGEDBY			[%$COMPUTER_ATTR_MANAGEDBY_OPERATOR_DISPLAY%]	%$COMPUTER_ATTR_MANAGEDBY%
+	echo  name				[%$ATTR_NAME_OPERATOR_DISPLAY%]	%$ATTR_NAME%
+	echo  cn				[%$ATTR_CN_OPERATOR_DISPLAY%]	%$ATTR_CN%
+	echo  description			[%$ATTR_DESCRIPTION_OPERATOR_DISPLAY%]	%$ATTR_DESCRIPTION%
+	echo  displayname			[%$ATTR_DISPLAYNAME_OPERATOR_DISPLAY%]	%$ATTR_DISPLAYNAME%
+	echo  WHENCREATED			[%$ATTR_WHENCREATED_OPERATOR_DISPLAY%]	%$ATTR_WHENCREATED%
+	echo  WHENCHANGED			[%$ATTR_WHENCHANGED_OPERATOR_DISPLAY%]	%$ATTR_WHENCHANGED%
+	echo  LOGONCOUNT			[%$ATTR_LOGONCOUNT_OPERATOR_DISPLAY%]	%$ATTR_LOGONCOUNT%
+	echo  LASTLOGONTIMESTAMP		[%$ATTR_LASTLOGONTIMESTAMP_OPERATOR_DISPLAY%]	%$ATTR_LASTLOGONTIMESTAMP%
+	echo  OBJECTSID			[%$ATTR_OBJECTSID_OPERATOR_DISPLAY%]	%$ATTR_OBJECTSID%
+	echo  DNSHOSTNAME			[%$ATTR_DNSHOSTNAME_OPERATOR_DISPLAY%]	%$ATTR_DNSHOSTNAME%
+	echo  OPERATINGSYSTEM		[%$ATTR_OPERATINGSYSTEM_OPERATOR_DISPLAY%]	%$ATTR_OPERATINGSYSTEM%
+	echo  OPERATINGSYSTEMVERSION		[%$ATTR_OPERATINGSYSTEMVERSION_OPERATOR_DISPLAY%]	%$ATTR_OPERATINGSYSTEMVERSION%
+	echo  OPERATINGSYSTEMSERVICEPACK	[%$ATTR_OPERATINGSYSTEMSERVICEPACK_OPERATOR_DISPLAY%]	%$ATTR_OPERATINGSYSTEMSERVICEPACK%
+	echo  MANAGEDBY			[%$ATTR_MANAGEDBY_OPERATOR_DISPLAY%]	%$ATTR_MANAGEDBY%
 	echo.
 	@powershell Write-Host "Searching..." -ForegroundColor DarkYellow
 	:: Start Elapse Time
@@ -2147,20 +3469,20 @@ GoTo jumpSGDNL
 	echo Start search %DATE% %Time% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo UTC: %$UTC% %$UTC_STANDARD_NAME% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Search Type: %$LAST_SEARCH_TYPE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	echo Name Attribute: [%$COMPUTER_ATTR_NAME_OPERATOR_DISPLAY%] %$COMPUTER_ATTR_NAME% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	echo cn Attribute: [%$COMPUTER_ATTR_CN_OPERATOR_DISPLAY%] %$COMPUTER_ATTR_CN% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	echo description Attribute: [%$COMPUTER_ATTR_DESCRIPTION_OPERATOR_DISPLAY%] %$COMPUTER_ATTR_DESCRIPTION% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	echo displayName Attribute: [%$COMPUTER_ATTR_DISPLAYNAME_OPERATOR_DISPLAY%] %$COMPUTER_ATTR_DISPLAYNAME% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	echo whenCreated Attribute: [%$COMPUTER_ATTR_WHENCREATED_OPERATOR_DISPLAY%] %$COMPUTER_ATTR_WHENCREATED% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	echo whenChanged Attribute: [%$COMPUTER_ATTR_WHENCHANGED_OPERATOR_DISPLAY%] %$COMPUTER_ATTR_WHENCHANGED% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	echo logonCount Attribute: [%$COMPUTER_ATTR_LOGONCOUNT_OPERATOR_DISPLAY%] %$COMPUTER_ATTR_LOGONCOUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	echo lastLogonTimestamp Attribute: [%$COMPUTER_ATTR_LASTLOGONTIMESTAMP_OPERATOR_DISPLAY%] %$COMPUTER_ATTR_LASTLOGONTIMESTAMP% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	echo objectSid Attribute: [%$COMPUTER_ATTR_OBJECTSID_OPERATOR_DISPLAY%] %$COMPUTER_ATTR_OBJECTSID% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	echo dNSHostName Attribute: [%$COMPUTER_ATTR_DNSHOSTNAME_OPERATOR_DISPLAY%] %$COMPUTER_ATTR_DNSHOSTNAME% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	echo operatingSystem Attribute: [%$COMPUTER_ATTR_OPERATINGSYSTEM_OPERATOR_DISPLAY%] %$COMPUTER_ATTR_OPERATINGSYSTEM% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	echo operatingSystemVersion Attribute: [%$COMPUTER_ATTR_OPERATINGSYSTEMVERSION_OPERATOR_DISPLAY%] %$COMPUTER_ATTR_OPERATINGSYSTEMVERSION% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	echo operatingSystemServicePack Attribute: [%$COMPUTER_ATTR_OPERATINGSYSTEMSERVICEPACK_OPERATOR_DISPLAY%] %$COMPUTER_ATTR_OPERATINGSYSTEMSERVICEPACK% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	echo managedBy Attribute: [%$COMPUTER_ATTR_MANAGEDBY_OPERATOR_DISPLAY%] %$COMPUTER_ATTR_MANAGEDBY% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Name Attribute: [%$ATTR_NAME_OPERATOR_DISPLAY%] %$ATTR_NAME% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo cn Attribute: [%$ATTR_CN_OPERATOR_DISPLAY%] %$ATTR_CN% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo description Attribute: [%$ATTR_DESCRIPTION_OPERATOR_DISPLAY%] %$ATTR_DESCRIPTION% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo displayName Attribute: [%$ATTR_DISPLAYNAME_OPERATOR_DISPLAY%] %$ATTR_DISPLAYNAME% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo whenCreated Attribute: [%$ATTR_WHENCREATED_OPERATOR_DISPLAY%] %$ATTR_WHENCREATED% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo whenChanged Attribute: [%$ATTR_WHENCHANGED_OPERATOR_DISPLAY%] %$ATTR_WHENCHANGED% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo logonCount Attribute: [%$ATTR_LOGONCOUNT_OPERATOR_DISPLAY%] %$ATTR_LOGONCOUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo lastLogonTimestamp Attribute: [%$ATTR_LASTLOGONTIMESTAMP_OPERATOR_DISPLAY%] %$ATTR_LASTLOGONTIMESTAMP% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo objectSid Attribute: [%$ATTR_OBJECTSID_OPERATOR_DISPLAY%] %$ATTR_OBJECTSID% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo dNSHostName Attribute: [%$ATTR_DNSHOSTNAME_OPERATOR_DISPLAY%] %$ATTR_DNSHOSTNAME% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo operatingSystem Attribute: [%$ATTR_OPERATINGSYSTEM_OPERATOR_DISPLAY%] %$ATTR_OPERATINGSYSTEM% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo operatingSystemVersion Attribute: [%$ATTR_OPERATINGSYSTEMVERSION_OPERATOR_DISPLAY%] %$ATTR_OPERATINGSYSTEMVERSION% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo operatingSystemServicePack Attribute: [%$ATTR_OPERATINGSYSTEMSERVICEPACK_OPERATOR_DISPLAY%] %$ATTR_OPERATINGSYSTEMSERVICEPACK% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo managedBy Attribute: [%$ATTR_MANAGEDBY_OPERATOR_DISPLAY%] %$ATTR_MANAGEDBY% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Search AD Root: %$AD_BASE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Search AD Scope: %$AD_SCOPE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Domain Controller: %$DC% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -2173,30 +3495,30 @@ GoTo jumpSGDNL
 	if %$SORTED% EQU 1 GoTo jumpSCMAS
 	:: Search
 	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
-		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name%$COMPUTER_ATTR_NAME_OPERATOR%%$COMPUTER_ATTR_NAME%)(cn%$COMPUTER_ATTR_CN_OPERATOR%%$COMPUTER_ATTR_CN%)(description%$COMPUTER_ATTR_DESCRIPTION_OPERATOR%%$COMPUTER_ATTR_DESCRIPTION%)(displayname%$COMPUTER_ATTR_displayname_OPERATOR%%$COMPUTER_ATTR_displayname%)(whenCreated%$COMPUTER_ATTR_whenCreated_OPERATOR%%$COMPUTER_ATTR_whenCreated%)(whenChanged%$COMPUTER_ATTR_whenChanged_OPERATOR%%$COMPUTER_ATTR_whenChanged%)(logonCount%$COMPUTER_ATTR_logonCount_OPERATOR%%$COMPUTER_ATTR_logonCount%)(lastLogonTimestamp%$COMPUTER_ATTR_lastLogonTimestamp_OPERATOR%%$COMPUTER_ATTR_lastLogonTimestamp%)(objectSid%$COMPUTER_ATTR_objectSid_OPERATOR%%$COMPUTER_ATTR_objectSid%)(dNSHostName%$COMPUTER_ATTR_dNSHostName_OPERATOR%%$COMPUTER_ATTR_dNSHostName%)(operatingSystem%$COMPUTER_ATTR_operatingSystem_OPERATOR%%$COMPUTER_ATTR_operatingSystem%)(operatingSystemVersion%$COMPUTER_ATTR_operatingSystemVersion_OPERATOR%%$COMPUTER_ATTR_operatingSystemVersion%)(operatingSystemServicePack%$COMPUTER_ATTR_operatingSystemServicePack_OPERATOR%%$COMPUTER_ATTR_operatingSystemServicePack%)(managedBy%$COMPUTER_ATTR_managedBy_OPERATOR%%$COMPUTER_ATTR_managedBy%))" -attr name distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH%  > "%$LogPath%\var\var_Last_Search_N_DN.txt") ELSE (
-		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name%$COMPUTER_ATTR_NAME_OPERATOR%%$COMPUTER_ATTR_NAME%)(cn%$COMPUTER_ATTR_CN_OPERATOR%%$COMPUTER_ATTR_CN%)(description%$COMPUTER_ATTR_DESCRIPTION_OPERATOR%%$COMPUTER_ATTR_DESCRIPTION%)(displayname%$COMPUTER_ATTR_displayname_OPERATOR%%$COMPUTER_ATTR_displayname%)(whenCreated%$COMPUTER_ATTR_whenCreated_OPERATOR%%$COMPUTER_ATTR_whenCreated%)(whenChanged%$COMPUTER_ATTR_whenChanged_OPERATOR%%$COMPUTER_ATTR_whenChanged%)(logonCount%$COMPUTER_ATTR_logonCount_OPERATOR%%$COMPUTER_ATTR_logonCount%)(lastLogonTimestamp%$COMPUTER_ATTR_lastLogonTimestamp_OPERATOR%%$COMPUTER_ATTR_lastLogonTimestamp%)(objectSid%$COMPUTER_ATTR_objectSid_OPERATOR%%$COMPUTER_ATTR_objectSid%)(dNSHostName%$COMPUTER_ATTR_dNSHostName_OPERATOR%%$COMPUTER_ATTR_dNSHostName%)(operatingSystem%$COMPUTER_ATTR_operatingSystem_OPERATOR%%$COMPUTER_ATTR_operatingSystem%)(operatingSystemVersion%$COMPUTER_ATTR_operatingSystemVersion_OPERATOR%%$COMPUTER_ATTR_operatingSystemVersion%)(operatingSystemServicePack%$COMPUTER_ATTR_operatingSystemServicePack_OPERATOR%%$COMPUTER_ATTR_operatingSystemServicePack%)(managedBy%$COMPUTER_ATTR_managedBy_OPERATOR%%$COMPUTER_ATTR_managedBy%))" -attr name distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% > "%$LogPath%\var\var_Last_Search_N_DN.txt"
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name%$ATTR_NAME_OPERATOR%%$ATTR_NAME%)(cn%$ATTR_CN_OPERATOR%%$ATTR_CN%)(description%$ATTR_DESCRIPTION_OPERATOR%%$ATTR_DESCRIPTION%)(displayname%$ATTR_displayname_OPERATOR%%$ATTR_displayname%)(whenCreated%$ATTR_whenCreated_OPERATOR%%$ATTR_whenCreated%)(whenChanged%$ATTR_whenChanged_OPERATOR%%$ATTR_whenChanged%)(logonCount%$ATTR_logonCount_OPERATOR%%$ATTR_logonCount%)(lastLogonTimestamp%$ATTR_lastLogonTimestamp_OPERATOR%%$ATTR_lastLogonTimestamp%)(objectSid%$ATTR_objectSid_OPERATOR%%$ATTR_objectSid%)(dNSHostName%$ATTR_dNSHostName_OPERATOR%%$ATTR_dNSHostName%)(operatingSystem%$ATTR_operatingSystem_OPERATOR%%$ATTR_operatingSystem%)(operatingSystemVersion%$ATTR_operatingSystemVersion_OPERATOR%%$ATTR_operatingSystemVersion%)(operatingSystemServicePack%$ATTR_operatingSystemServicePack_OPERATOR%%$ATTR_operatingSystemServicePack%)(managedBy%$ATTR_managedBy_OPERATOR%%$ATTR_managedBy%))" -attr name distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH%  > "%$LogPath%\var\var_Last_Search_N_DN.txt") ELSE (
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name%$ATTR_NAME_OPERATOR%%$ATTR_NAME%)(cn%$ATTR_CN_OPERATOR%%$ATTR_CN%)(description%$ATTR_DESCRIPTION_OPERATOR%%$ATTR_DESCRIPTION%)(displayname%$ATTR_displayname_OPERATOR%%$ATTR_displayname%)(whenCreated%$ATTR_whenCreated_OPERATOR%%$ATTR_whenCreated%)(whenChanged%$ATTR_whenChanged_OPERATOR%%$ATTR_whenChanged%)(logonCount%$ATTR_logonCount_OPERATOR%%$ATTR_logonCount%)(lastLogonTimestamp%$ATTR_lastLogonTimestamp_OPERATOR%%$ATTR_lastLogonTimestamp%)(objectSid%$ATTR_objectSid_OPERATOR%%$ATTR_objectSid%)(dNSHostName%$ATTR_dNSHostName_OPERATOR%%$ATTR_dNSHostName%)(operatingSystem%$ATTR_operatingSystem_OPERATOR%%$ATTR_operatingSystem%)(operatingSystemVersion%$ATTR_operatingSystemVersion_OPERATOR%%$ATTR_operatingSystemVersion%)(operatingSystemServicePack%$ATTR_operatingSystemServicePack_OPERATOR%%$ATTR_operatingSystemServicePack%)(managedBy%$ATTR_managedBy_OPERATOR%%$ATTR_managedBy%))" -attr name distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% > "%$LogPath%\var\var_Last_Search_N_DN.txt"
 		)
 	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
-		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name%$COMPUTER_ATTR_NAME_OPERATOR%%$COMPUTER_ATTR_NAME%)(cn%$COMPUTER_ATTR_CN_OPERATOR%%$COMPUTER_ATTR_CN%)(description%$COMPUTER_ATTR_DESCRIPTION_OPERATOR%%$COMPUTER_ATTR_DESCRIPTION%)(displayname%$COMPUTER_ATTR_displayname_OPERATOR%%$COMPUTER_ATTR_displayname%)(whenCreated%$COMPUTER_ATTR_whenCreated_OPERATOR%%$COMPUTER_ATTR_whenCreated%)(whenChanged%$COMPUTER_ATTR_whenChanged_OPERATOR%%$COMPUTER_ATTR_whenChanged%)(logonCount%$COMPUTER_ATTR_logonCount_OPERATOR%%$COMPUTER_ATTR_logonCount%)(lastLogonTimestamp%$COMPUTER_ATTR_lastLogonTimestamp_OPERATOR%%$COMPUTER_ATTR_lastLogonTimestamp%)(objectSid%$COMPUTER_ATTR_objectSid_OPERATOR%%$COMPUTER_ATTR_objectSid%)(dNSHostName%$COMPUTER_ATTR_dNSHostName_OPERATOR%%$COMPUTER_ATTR_dNSHostName%)(operatingSystem%$COMPUTER_ATTR_operatingSystem_OPERATOR%%$COMPUTER_ATTR_operatingSystem%)(operatingSystemVersion%$COMPUTER_ATTR_operatingSystemVersion_OPERATOR%%$COMPUTER_ATTR_operatingSystemVersion%)(operatingSystemServicePack%$COMPUTER_ATTR_operatingSystemServicePack_OPERATOR%%$COMPUTER_ATTR_operatingSystemServicePack%)(managedBy%$COMPUTER_ATTR_managedBy_OPERATOR%%$COMPUTER_ATTR_managedBy%))" -attr name -limit %$sLimit% %$AD_SERVER_SEARCH%  > "%$LogPath%\var\var_Last_Search_N.txt") ELSE (
-		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name%$COMPUTER_ATTR_NAME_OPERATOR%%$COMPUTER_ATTR_NAME%)(cn%$COMPUTER_ATTR_CN_OPERATOR%%$COMPUTER_ATTR_CN%)(description%$COMPUTER_ATTR_DESCRIPTION_OPERATOR%%$COMPUTER_ATTR_DESCRIPTION%)(displayname%$COMPUTER_ATTR_displayname_OPERATOR%%$COMPUTER_ATTR_displayname%)(whenCreated%$COMPUTER_ATTR_whenCreated_OPERATOR%%$COMPUTER_ATTR_whenCreated%)(whenChanged%$COMPUTER_ATTR_whenChanged_OPERATOR%%$COMPUTER_ATTR_whenChanged%)(logonCount%$COMPUTER_ATTR_logonCount_OPERATOR%%$COMPUTER_ATTR_logonCount%)(lastLogonTimestamp%$COMPUTER_ATTR_lastLogonTimestamp_OPERATOR%%$COMPUTER_ATTR_lastLogonTimestamp%)(objectSid%$COMPUTER_ATTR_objectSid_OPERATOR%%$COMPUTER_ATTR_objectSid%)(dNSHostName%$COMPUTER_ATTR_dNSHostName_OPERATOR%%$COMPUTER_ATTR_dNSHostName%)(operatingSystem%$COMPUTER_ATTR_operatingSystem_OPERATOR%%$COMPUTER_ATTR_operatingSystem%)(operatingSystemVersion%$COMPUTER_ATTR_operatingSystemVersion_OPERATOR%%$COMPUTER_ATTR_operatingSystemVersion%)(operatingSystemServicePack%$COMPUTER_ATTR_operatingSystemServicePack_OPERATOR%%$COMPUTER_ATTR_operatingSystemServicePack%)(managedBy%$COMPUTER_ATTR_managedBy_OPERATOR%%$COMPUTER_ATTR_managedBy%))" -attr name -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% > "%$LogPath%\var\var_Last_Search_N.txt"
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name%$ATTR_NAME_OPERATOR%%$ATTR_NAME%)(cn%$ATTR_CN_OPERATOR%%$ATTR_CN%)(description%$ATTR_DESCRIPTION_OPERATOR%%$ATTR_DESCRIPTION%)(displayname%$ATTR_displayname_OPERATOR%%$ATTR_displayname%)(whenCreated%$ATTR_whenCreated_OPERATOR%%$ATTR_whenCreated%)(whenChanged%$ATTR_whenChanged_OPERATOR%%$ATTR_whenChanged%)(logonCount%$ATTR_logonCount_OPERATOR%%$ATTR_logonCount%)(lastLogonTimestamp%$ATTR_lastLogonTimestamp_OPERATOR%%$ATTR_lastLogonTimestamp%)(objectSid%$ATTR_objectSid_OPERATOR%%$ATTR_objectSid%)(dNSHostName%$ATTR_dNSHostName_OPERATOR%%$ATTR_dNSHostName%)(operatingSystem%$ATTR_operatingSystem_OPERATOR%%$ATTR_operatingSystem%)(operatingSystemVersion%$ATTR_operatingSystemVersion_OPERATOR%%$ATTR_operatingSystemVersion%)(operatingSystemServicePack%$ATTR_operatingSystemServicePack_OPERATOR%%$ATTR_operatingSystemServicePack%)(managedBy%$ATTR_managedBy_OPERATOR%%$ATTR_managedBy%))" -attr name -limit %$sLimit% %$AD_SERVER_SEARCH%  > "%$LogPath%\var\var_Last_Search_N.txt") ELSE (
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name%$ATTR_NAME_OPERATOR%%$ATTR_NAME%)(cn%$ATTR_CN_OPERATOR%%$ATTR_CN%)(description%$ATTR_DESCRIPTION_OPERATOR%%$ATTR_DESCRIPTION%)(displayname%$ATTR_displayname_OPERATOR%%$ATTR_displayname%)(whenCreated%$ATTR_whenCreated_OPERATOR%%$ATTR_whenCreated%)(whenChanged%$ATTR_whenChanged_OPERATOR%%$ATTR_whenChanged%)(logonCount%$ATTR_logonCount_OPERATOR%%$ATTR_logonCount%)(lastLogonTimestamp%$ATTR_lastLogonTimestamp_OPERATOR%%$ATTR_lastLogonTimestamp%)(objectSid%$ATTR_objectSid_OPERATOR%%$ATTR_objectSid%)(dNSHostName%$ATTR_dNSHostName_OPERATOR%%$ATTR_dNSHostName%)(operatingSystem%$ATTR_operatingSystem_OPERATOR%%$ATTR_operatingSystem%)(operatingSystemVersion%$ATTR_operatingSystemVersion_OPERATOR%%$ATTR_operatingSystemVersion%)(operatingSystemServicePack%$ATTR_operatingSystemServicePack_OPERATOR%%$ATTR_operatingSystemServicePack%)(managedBy%$ATTR_managedBy_OPERATOR%%$ATTR_managedBy%))" -attr name -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% > "%$LogPath%\var\var_Last_Search_N.txt"
 		)
 	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
-		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name%$COMPUTER_ATTR_NAME_OPERATOR%%$COMPUTER_ATTR_NAME%)(cn%$COMPUTER_ATTR_CN_OPERATOR%%$COMPUTER_ATTR_CN%)(description%$COMPUTER_ATTR_DESCRIPTION_OPERATOR%%$COMPUTER_ATTR_DESCRIPTION%)(displayname%$COMPUTER_ATTR_displayname_OPERATOR%%$COMPUTER_ATTR_displayname%)(whenCreated%$COMPUTER_ATTR_whenCreated_OPERATOR%%$COMPUTER_ATTR_whenCreated%)(whenChanged%$COMPUTER_ATTR_whenChanged_OPERATOR%%$COMPUTER_ATTR_whenChanged%)(logonCount%$COMPUTER_ATTR_logonCount_OPERATOR%%$COMPUTER_ATTR_logonCount%)(lastLogonTimestamp%$COMPUTER_ATTR_lastLogonTimestamp_OPERATOR%%$COMPUTER_ATTR_lastLogonTimestamp%)(objectSid%$COMPUTER_ATTR_objectSid_OPERATOR%%$COMPUTER_ATTR_objectSid%)(dNSHostName%$COMPUTER_ATTR_dNSHostName_OPERATOR%%$COMPUTER_ATTR_dNSHostName%)(operatingSystem%$COMPUTER_ATTR_operatingSystem_OPERATOR%%$COMPUTER_ATTR_operatingSystem%)(operatingSystemVersion%$COMPUTER_ATTR_operatingSystemVersion_OPERATOR%%$COMPUTER_ATTR_operatingSystemVersion%)(operatingSystemServicePack%$COMPUTER_ATTR_operatingSystemServicePack_OPERATOR%%$COMPUTER_ATTR_operatingSystemServicePack%)(managedBy%$COMPUTER_ATTR_managedBy_OPERATOR%%$COMPUTER_ATTR_managedBy%))" -attr distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% > "%$LogPath%\var\var_Last_Search_DN.txt") ELSE (
-		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE%-filter "(&(objectClass=computer)(name%$COMPUTER_ATTR_NAME_OPERATOR%%$COMPUTER_ATTR_NAME%)(cn%$COMPUTER_ATTR_CN_OPERATOR%%$COMPUTER_ATTR_CN%)(description%$COMPUTER_ATTR_DESCRIPTION_OPERATOR%%$COMPUTER_ATTR_DESCRIPTION%)(displayname%$COMPUTER_ATTR_displayname_OPERATOR%%$COMPUTER_ATTR_displayname%)(whenCreated%$COMPUTER_ATTR_whenCreated_OPERATOR%%$COMPUTER_ATTR_whenCreated%)(whenChanged%$COMPUTER_ATTR_whenChanged_OPERATOR%%$COMPUTER_ATTR_whenChanged%)(logonCount%$COMPUTER_ATTR_logonCount_OPERATOR%%$COMPUTER_ATTR_logonCount%)(lastLogonTimestamp%$COMPUTER_ATTR_lastLogonTimestamp_OPERATOR%%$COMPUTER_ATTR_lastLogonTimestamp%)(objectSid%$COMPUTER_ATTR_objectSid_OPERATOR%%$COMPUTER_ATTR_objectSid%)(dNSHostName%$COMPUTER_ATTR_dNSHostName_OPERATOR%%$COMPUTER_ATTR_dNSHostName%)(operatingSystem%$COMPUTER_ATTR_operatingSystem_OPERATOR%%$COMPUTER_ATTR_operatingSystem%)(operatingSystemVersion%$COMPUTER_ATTR_operatingSystemVersion_OPERATOR%%$COMPUTER_ATTR_operatingSystemVersion%)(operatingSystemServicePack%$COMPUTER_ATTR_operatingSystemServicePack_OPERATOR%%$COMPUTER_ATTR_operatingSystemServicePack%)(managedBy%$COMPUTER_ATTR_managedBy_OPERATOR%%$COMPUTER_ATTR_managedBy%))" -attr distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% > "%$LogPath%\var\var_Last_Search_DN.txt"
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name%$ATTR_NAME_OPERATOR%%$ATTR_NAME%)(cn%$ATTR_CN_OPERATOR%%$ATTR_CN%)(description%$ATTR_DESCRIPTION_OPERATOR%%$ATTR_DESCRIPTION%)(displayname%$ATTR_displayname_OPERATOR%%$ATTR_displayname%)(whenCreated%$ATTR_whenCreated_OPERATOR%%$ATTR_whenCreated%)(whenChanged%$ATTR_whenChanged_OPERATOR%%$ATTR_whenChanged%)(logonCount%$ATTR_logonCount_OPERATOR%%$ATTR_logonCount%)(lastLogonTimestamp%$ATTR_lastLogonTimestamp_OPERATOR%%$ATTR_lastLogonTimestamp%)(objectSid%$ATTR_objectSid_OPERATOR%%$ATTR_objectSid%)(dNSHostName%$ATTR_dNSHostName_OPERATOR%%$ATTR_dNSHostName%)(operatingSystem%$ATTR_operatingSystem_OPERATOR%%$ATTR_operatingSystem%)(operatingSystemVersion%$ATTR_operatingSystemVersion_OPERATOR%%$ATTR_operatingSystemVersion%)(operatingSystemServicePack%$ATTR_operatingSystemServicePack_OPERATOR%%$ATTR_operatingSystemServicePack%)(managedBy%$ATTR_managedBy_OPERATOR%%$ATTR_managedBy%))" -attr distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% > "%$LogPath%\var\var_Last_Search_DN.txt") ELSE (
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE%-filter "(&(objectClass=computer)(name%$ATTR_NAME_OPERATOR%%$ATTR_NAME%)(cn%$ATTR_CN_OPERATOR%%$ATTR_CN%)(description%$ATTR_DESCRIPTION_OPERATOR%%$ATTR_DESCRIPTION%)(displayname%$ATTR_displayname_OPERATOR%%$ATTR_displayname%)(whenCreated%$ATTR_whenCreated_OPERATOR%%$ATTR_whenCreated%)(whenChanged%$ATTR_whenChanged_OPERATOR%%$ATTR_whenChanged%)(logonCount%$ATTR_logonCount_OPERATOR%%$ATTR_logonCount%)(lastLogonTimestamp%$ATTR_lastLogonTimestamp_OPERATOR%%$ATTR_lastLogonTimestamp%)(objectSid%$ATTR_objectSid_OPERATOR%%$ATTR_objectSid%)(dNSHostName%$ATTR_dNSHostName_OPERATOR%%$ATTR_dNSHostName%)(operatingSystem%$ATTR_operatingSystem_OPERATOR%%$ATTR_operatingSystem%)(operatingSystemVersion%$ATTR_operatingSystemVersion_OPERATOR%%$ATTR_operatingSystemVersion%)(operatingSystemServicePack%$ATTR_operatingSystemServicePack_OPERATOR%%$ATTR_operatingSystemServicePack%)(managedBy%$ATTR_managedBy_OPERATOR%%$ATTR_managedBy%))" -attr distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% > "%$LogPath%\var\var_Last_Search_DN.txt"
 		)	
 	if %$SORTED% NEQ 1 GoTo skipSCMAS
 :jumpSCMAS
 	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
-		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name%$COMPUTER_ATTR_NAME_OPERATOR%%$COMPUTER_ATTR_NAME%)(cn%$COMPUTER_ATTR_CN_OPERATOR%%$COMPUTER_ATTR_CN%)(description%$COMPUTER_ATTR_DESCRIPTION_OPERATOR%%$COMPUTER_ATTR_DESCRIPTION%)(displayname%$COMPUTER_ATTR_displayname_OPERATOR%%$COMPUTER_ATTR_displayname%)(whenCreated%$COMPUTER_ATTR_whenCreated_OPERATOR%%$COMPUTER_ATTR_whenCreated%)(whenChanged%$COMPUTER_ATTR_whenChanged_OPERATOR%%$COMPUTER_ATTR_whenChanged%)(logonCount%$COMPUTER_ATTR_logonCount_OPERATOR%%$COMPUTER_ATTR_logonCount%)(lastLogonTimestamp%$COMPUTER_ATTR_lastLogonTimestamp_OPERATOR%%$COMPUTER_ATTR_lastLogonTimestamp%)(objectSid%$COMPUTER_ATTR_objectSid_OPERATOR%%$COMPUTER_ATTR_objectSid%)(dNSHostName%$COMPUTER_ATTR_dNSHostName_OPERATOR%%$COMPUTER_ATTR_dNSHostName%)(operatingSystem%$COMPUTER_ATTR_operatingSystem_OPERATOR%%$COMPUTER_ATTR_operatingSystem%)(operatingSystemVersion%$COMPUTER_ATTR_operatingSystemVersion_OPERATOR%%$COMPUTER_ATTR_operatingSystemVersion%)(operatingSystemServicePack%$COMPUTER_ATTR_operatingSystemServicePack_OPERATOR%%$COMPUTER_ATTR_operatingSystemServicePack%)(managedBy%$COMPUTER_ATTR_managedBy_OPERATOR%%$COMPUTER_ATTR_managedBy%))" -attr name distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% | sort > "%$LogPath%\var\var_Last_Search_N_DN.txt") ELSE (
-		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name%$COMPUTER_ATTR_NAME_OPERATOR%%$COMPUTER_ATTR_NAME%)(cn%$COMPUTER_ATTR_CN_OPERATOR%%$COMPUTER_ATTR_CN%)(description%$COMPUTER_ATTR_DESCRIPTION_OPERATOR%%$COMPUTER_ATTR_DESCRIPTION%)(displayname%$COMPUTER_ATTR_displayname_OPERATOR%%$COMPUTER_ATTR_displayname%)(whenCreated%$COMPUTER_ATTR_whenCreated_OPERATOR%%$COMPUTER_ATTR_whenCreated%)(whenChanged%$COMPUTER_ATTR_whenChanged_OPERATOR%%$COMPUTER_ATTR_whenChanged%)(logonCount%$COMPUTER_ATTR_logonCount_OPERATOR%%$COMPUTER_ATTR_logonCount%)(lastLogonTimestamp%$COMPUTER_ATTR_lastLogonTimestamp_OPERATOR%%$COMPUTER_ATTR_lastLogonTimestamp%)(objectSid%$COMPUTER_ATTR_objectSid_OPERATOR%%$COMPUTER_ATTR_objectSid%)(dNSHostName%$COMPUTER_ATTR_dNSHostName_OPERATOR%%$COMPUTER_ATTR_dNSHostName%)(operatingSystem%$COMPUTER_ATTR_operatingSystem_OPERATOR%%$COMPUTER_ATTR_operatingSystem%)(operatingSystemVersion%$COMPUTER_ATTR_operatingSystemVersion_OPERATOR%%$COMPUTER_ATTR_operatingSystemVersion%)(operatingSystemServicePack%$COMPUTER_ATTR_operatingSystemServicePack_OPERATOR%%$COMPUTER_ATTR_operatingSystemServicePack%)(managedBy%$COMPUTER_ATTR_managedBy_OPERATOR%%$COMPUTER_ATTR_managedBy%))" -attr name distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% | sort > "%$LogPath%\var\var_Last_Search_N_DN.txt"
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name%$ATTR_NAME_OPERATOR%%$ATTR_NAME%)(cn%$ATTR_CN_OPERATOR%%$ATTR_CN%)(description%$ATTR_DESCRIPTION_OPERATOR%%$ATTR_DESCRIPTION%)(displayname%$ATTR_displayname_OPERATOR%%$ATTR_displayname%)(whenCreated%$ATTR_whenCreated_OPERATOR%%$ATTR_whenCreated%)(whenChanged%$ATTR_whenChanged_OPERATOR%%$ATTR_whenChanged%)(logonCount%$ATTR_logonCount_OPERATOR%%$ATTR_logonCount%)(lastLogonTimestamp%$ATTR_lastLogonTimestamp_OPERATOR%%$ATTR_lastLogonTimestamp%)(objectSid%$ATTR_objectSid_OPERATOR%%$ATTR_objectSid%)(dNSHostName%$ATTR_dNSHostName_OPERATOR%%$ATTR_dNSHostName%)(operatingSystem%$ATTR_operatingSystem_OPERATOR%%$ATTR_operatingSystem%)(operatingSystemVersion%$ATTR_operatingSystemVersion_OPERATOR%%$ATTR_operatingSystemVersion%)(operatingSystemServicePack%$ATTR_operatingSystemServicePack_OPERATOR%%$ATTR_operatingSystemServicePack%)(managedBy%$ATTR_managedBy_OPERATOR%%$ATTR_managedBy%))" -attr name distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% | sort > "%$LogPath%\var\var_Last_Search_N_DN.txt") ELSE (
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name%$ATTR_NAME_OPERATOR%%$ATTR_NAME%)(cn%$ATTR_CN_OPERATOR%%$ATTR_CN%)(description%$ATTR_DESCRIPTION_OPERATOR%%$ATTR_DESCRIPTION%)(displayname%$ATTR_displayname_OPERATOR%%$ATTR_displayname%)(whenCreated%$ATTR_whenCreated_OPERATOR%%$ATTR_whenCreated%)(whenChanged%$ATTR_whenChanged_OPERATOR%%$ATTR_whenChanged%)(logonCount%$ATTR_logonCount_OPERATOR%%$ATTR_logonCount%)(lastLogonTimestamp%$ATTR_lastLogonTimestamp_OPERATOR%%$ATTR_lastLogonTimestamp%)(objectSid%$ATTR_objectSid_OPERATOR%%$ATTR_objectSid%)(dNSHostName%$ATTR_dNSHostName_OPERATOR%%$ATTR_dNSHostName%)(operatingSystem%$ATTR_operatingSystem_OPERATOR%%$ATTR_operatingSystem%)(operatingSystemVersion%$ATTR_operatingSystemVersion_OPERATOR%%$ATTR_operatingSystemVersion%)(operatingSystemServicePack%$ATTR_operatingSystemServicePack_OPERATOR%%$ATTR_operatingSystemServicePack%)(managedBy%$ATTR_managedBy_OPERATOR%%$ATTR_managedBy%))" -attr name distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% | sort > "%$LogPath%\var\var_Last_Search_N_DN.txt"
 		)
 	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
-		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name%$COMPUTER_ATTR_NAME_OPERATOR%%$COMPUTER_ATTR_NAME%)(cn%$COMPUTER_ATTR_CN_OPERATOR%%$COMPUTER_ATTR_CN%)(description%$COMPUTER_ATTR_DESCRIPTION_OPERATOR%%$COMPUTER_ATTR_DESCRIPTION%)(displayname%$COMPUTER_ATTR_displayname_OPERATOR%%$COMPUTER_ATTR_displayname%)(whenCreated%$COMPUTER_ATTR_whenCreated_OPERATOR%%$COMPUTER_ATTR_whenCreated%)(whenChanged%$COMPUTER_ATTR_whenChanged_OPERATOR%%$COMPUTER_ATTR_whenChanged%)(logonCount%$COMPUTER_ATTR_logonCount_OPERATOR%%$COMPUTER_ATTR_logonCount%)(lastLogonTimestamp%$COMPUTER_ATTR_lastLogonTimestamp_OPERATOR%%$COMPUTER_ATTR_lastLogonTimestamp%)(objectSid%$COMPUTER_ATTR_objectSid_OPERATOR%%$COMPUTER_ATTR_objectSid%)(dNSHostName%$COMPUTER_ATTR_dNSHostName_OPERATOR%%$COMPUTER_ATTR_dNSHostName%)(operatingSystem%$COMPUTER_ATTR_operatingSystem_OPERATOR%%$COMPUTER_ATTR_operatingSystem%)(operatingSystemVersion%$COMPUTER_ATTR_operatingSystemVersion_OPERATOR%%$COMPUTER_ATTR_operatingSystemVersion%)(operatingSystemServicePack%$COMPUTER_ATTR_operatingSystemServicePack_OPERATOR%%$COMPUTER_ATTR_operatingSystemServicePack%)(managedBy%$COMPUTER_ATTR_managedBy_OPERATOR%%$COMPUTER_ATTR_managedBy%))" -attr name -limit %$sLimit% %$AD_SERVER_SEARCH% | sort  > "%$LogPath%\var\var_Last_Search_N.txt") ELSE (
-		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name%$COMPUTER_ATTR_NAME_OPERATOR%%$COMPUTER_ATTR_NAME%)(cn%$COMPUTER_ATTR_CN_OPERATOR%%$COMPUTER_ATTR_CN%)(description%$COMPUTER_ATTR_DESCRIPTION_OPERATOR%%$COMPUTER_ATTR_DESCRIPTION%)(displayname%$COMPUTER_ATTR_displayname_OPERATOR%%$COMPUTER_ATTR_displayname%)(whenCreated%$COMPUTER_ATTR_whenCreated_OPERATOR%%$COMPUTER_ATTR_whenCreated%)(whenChanged%$COMPUTER_ATTR_whenChanged_OPERATOR%%$COMPUTER_ATTR_whenChanged%)(logonCount%$COMPUTER_ATTR_logonCount_OPERATOR%%$COMPUTER_ATTR_logonCount%)(lastLogonTimestamp%$COMPUTER_ATTR_lastLogonTimestamp_OPERATOR%%$COMPUTER_ATTR_lastLogonTimestamp%)(objectSid%$COMPUTER_ATTR_objectSid_OPERATOR%%$COMPUTER_ATTR_objectSid%)(dNSHostName%$COMPUTER_ATTR_dNSHostName_OPERATOR%%$COMPUTER_ATTR_dNSHostName%)(operatingSystem%$COMPUTER_ATTR_operatingSystem_OPERATOR%%$COMPUTER_ATTR_operatingSystem%)(operatingSystemVersion%$COMPUTER_ATTR_operatingSystemVersion_OPERATOR%%$COMPUTER_ATTR_operatingSystemVersion%)(operatingSystemServicePack%$COMPUTER_ATTR_operatingSystemServicePack_OPERATOR%%$COMPUTER_ATTR_operatingSystemServicePack%)(managedBy%$COMPUTER_ATTR_managedBy_OPERATOR%%$COMPUTER_ATTR_managedBy%))" -attr name -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% | sort > "%$LogPath%\var\var_Last_Search_N.txt"
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name%$ATTR_NAME_OPERATOR%%$ATTR_NAME%)(cn%$ATTR_CN_OPERATOR%%$ATTR_CN%)(description%$ATTR_DESCRIPTION_OPERATOR%%$ATTR_DESCRIPTION%)(displayname%$ATTR_displayname_OPERATOR%%$ATTR_displayname%)(whenCreated%$ATTR_whenCreated_OPERATOR%%$ATTR_whenCreated%)(whenChanged%$ATTR_whenChanged_OPERATOR%%$ATTR_whenChanged%)(logonCount%$ATTR_logonCount_OPERATOR%%$ATTR_logonCount%)(lastLogonTimestamp%$ATTR_lastLogonTimestamp_OPERATOR%%$ATTR_lastLogonTimestamp%)(objectSid%$ATTR_objectSid_OPERATOR%%$ATTR_objectSid%)(dNSHostName%$ATTR_dNSHostName_OPERATOR%%$ATTR_dNSHostName%)(operatingSystem%$ATTR_operatingSystem_OPERATOR%%$ATTR_operatingSystem%)(operatingSystemVersion%$ATTR_operatingSystemVersion_OPERATOR%%$ATTR_operatingSystemVersion%)(operatingSystemServicePack%$ATTR_operatingSystemServicePack_OPERATOR%%$ATTR_operatingSystemServicePack%)(managedBy%$ATTR_managedBy_OPERATOR%%$ATTR_managedBy%))" -attr name -limit %$sLimit% %$AD_SERVER_SEARCH% | sort  > "%$LogPath%\var\var_Last_Search_N.txt") ELSE (
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name%$ATTR_NAME_OPERATOR%%$ATTR_NAME%)(cn%$ATTR_CN_OPERATOR%%$ATTR_CN%)(description%$ATTR_DESCRIPTION_OPERATOR%%$ATTR_DESCRIPTION%)(displayname%$ATTR_displayname_OPERATOR%%$ATTR_displayname%)(whenCreated%$ATTR_whenCreated_OPERATOR%%$ATTR_whenCreated%)(whenChanged%$ATTR_whenChanged_OPERATOR%%$ATTR_whenChanged%)(logonCount%$ATTR_logonCount_OPERATOR%%$ATTR_logonCount%)(lastLogonTimestamp%$ATTR_lastLogonTimestamp_OPERATOR%%$ATTR_lastLogonTimestamp%)(objectSid%$ATTR_objectSid_OPERATOR%%$ATTR_objectSid%)(dNSHostName%$ATTR_dNSHostName_OPERATOR%%$ATTR_dNSHostName%)(operatingSystem%$ATTR_operatingSystem_OPERATOR%%$ATTR_operatingSystem%)(operatingSystemVersion%$ATTR_operatingSystemVersion_OPERATOR%%$ATTR_operatingSystemVersion%)(operatingSystemServicePack%$ATTR_operatingSystemServicePack_OPERATOR%%$ATTR_operatingSystemServicePack%)(managedBy%$ATTR_managedBy_OPERATOR%%$ATTR_managedBy%))" -attr name -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% | sort > "%$LogPath%\var\var_Last_Search_N.txt"
 		)
 	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
-		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name%$COMPUTER_ATTR_NAME_OPERATOR%%$COMPUTER_ATTR_NAME%)(cn%$COMPUTER_ATTR_CN_OPERATOR%%$COMPUTER_ATTR_CN%)(description%$COMPUTER_ATTR_DESCRIPTION_OPERATOR%%$COMPUTER_ATTR_DESCRIPTION%)(displayname%$COMPUTER_ATTR_displayname_OPERATOR%%$COMPUTER_ATTR_displayname%)(whenCreated%$COMPUTER_ATTR_whenCreated_OPERATOR%%$COMPUTER_ATTR_whenCreated%)(whenChanged%$COMPUTER_ATTR_whenChanged_OPERATOR%%$COMPUTER_ATTR_whenChanged%)(logonCount%$COMPUTER_ATTR_logonCount_OPERATOR%%$COMPUTER_ATTR_logonCount%)(lastLogonTimestamp%$COMPUTER_ATTR_lastLogonTimestamp_OPERATOR%%$COMPUTER_ATTR_lastLogonTimestamp%)(objectSid%$COMPUTER_ATTR_objectSid_OPERATOR%%$COMPUTER_ATTR_objectSid%)(dNSHostName%$COMPUTER_ATTR_dNSHostName_OPERATOR%%$COMPUTER_ATTR_dNSHostName%)(operatingSystem%$COMPUTER_ATTR_operatingSystem_OPERATOR%%$COMPUTER_ATTR_operatingSystem%)(operatingSystemVersion%$COMPUTER_ATTR_operatingSystemVersion_OPERATOR%%$COMPUTER_ATTR_operatingSystemVersion%)(operatingSystemServicePack%$COMPUTER_ATTR_operatingSystemServicePack_OPERATOR%%$COMPUTER_ATTR_operatingSystemServicePack%)(managedBy%$COMPUTER_ATTR_managedBy_OPERATOR%%$COMPUTER_ATTR_managedBy%))" -attr distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% | sort > "%$LogPath%\var\var_Last_Search_DN.txt") ELSE (
-		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name%$COMPUTER_ATTR_NAME_OPERATOR%%$COMPUTER_ATTR_NAME%)(cn%$COMPUTER_ATTR_CN_OPERATOR%%$COMPUTER_ATTR_CN%)(description%$COMPUTER_ATTR_DESCRIPTION_OPERATOR%%$COMPUTER_ATTR_DESCRIPTION%)(displayname%$COMPUTER_ATTR_displayname_OPERATOR%%$COMPUTER_ATTR_displayname%)(whenCreated%$COMPUTER_ATTR_whenCreated_OPERATOR%%$COMPUTER_ATTR_whenCreated%)(whenChanged%$COMPUTER_ATTR_whenChanged_OPERATOR%%$COMPUTER_ATTR_whenChanged%)(logonCount%$COMPUTER_ATTR_logonCount_OPERATOR%%$COMPUTER_ATTR_logonCount%)(lastLogonTimestamp%$COMPUTER_ATTR_lastLogonTimestamp_OPERATOR%%$COMPUTER_ATTR_lastLogonTimestamp%)(objectSid%$COMPUTER_ATTR_objectSid_OPERATOR%%$COMPUTER_ATTR_objectSid%)(dNSHostName%$COMPUTER_ATTR_dNSHostName_OPERATOR%%$COMPUTER_ATTR_dNSHostName%)(operatingSystem%$COMPUTER_ATTR_operatingSystem_OPERATOR%%$COMPUTER_ATTR_operatingSystem%)(operatingSystemVersion%$COMPUTER_ATTR_operatingSystemVersion_OPERATOR%%$COMPUTER_ATTR_operatingSystemVersion%)(operatingSystemServicePack%$COMPUTER_ATTR_operatingSystemServicePack_OPERATOR%%$COMPUTER_ATTR_operatingSystemServicePack%)(managedBy%$COMPUTER_ATTR_managedBy_OPERATOR%%$COMPUTER_ATTR_managedBy%))" -attr distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% | sort > "%$LogPath%\var\var_Last_Search_DN.txt"
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name%$ATTR_NAME_OPERATOR%%$ATTR_NAME%)(cn%$ATTR_CN_OPERATOR%%$ATTR_CN%)(description%$ATTR_DESCRIPTION_OPERATOR%%$ATTR_DESCRIPTION%)(displayname%$ATTR_displayname_OPERATOR%%$ATTR_displayname%)(whenCreated%$ATTR_whenCreated_OPERATOR%%$ATTR_whenCreated%)(whenChanged%$ATTR_whenChanged_OPERATOR%%$ATTR_whenChanged%)(logonCount%$ATTR_logonCount_OPERATOR%%$ATTR_logonCount%)(lastLogonTimestamp%$ATTR_lastLogonTimestamp_OPERATOR%%$ATTR_lastLogonTimestamp%)(objectSid%$ATTR_objectSid_OPERATOR%%$ATTR_objectSid%)(dNSHostName%$ATTR_dNSHostName_OPERATOR%%$ATTR_dNSHostName%)(operatingSystem%$ATTR_operatingSystem_OPERATOR%%$ATTR_operatingSystem%)(operatingSystemVersion%$ATTR_operatingSystemVersion_OPERATOR%%$ATTR_operatingSystemVersion%)(operatingSystemServicePack%$ATTR_operatingSystemServicePack_OPERATOR%%$ATTR_operatingSystemServicePack%)(managedBy%$ATTR_managedBy_OPERATOR%%$ATTR_managedBy%))" -attr distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% | sort > "%$LogPath%\var\var_Last_Search_DN.txt") ELSE (
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name%$ATTR_NAME_OPERATOR%%$ATTR_NAME%)(cn%$ATTR_CN_OPERATOR%%$ATTR_CN%)(description%$ATTR_DESCRIPTION_OPERATOR%%$ATTR_DESCRIPTION%)(displayname%$ATTR_displayname_OPERATOR%%$ATTR_displayname%)(whenCreated%$ATTR_whenCreated_OPERATOR%%$ATTR_whenCreated%)(whenChanged%$ATTR_whenChanged_OPERATOR%%$ATTR_whenChanged%)(logonCount%$ATTR_logonCount_OPERATOR%%$ATTR_logonCount%)(lastLogonTimestamp%$ATTR_lastLogonTimestamp_OPERATOR%%$ATTR_lastLogonTimestamp%)(objectSid%$ATTR_objectSid_OPERATOR%%$ATTR_objectSid%)(dNSHostName%$ATTR_dNSHostName_OPERATOR%%$ATTR_dNSHostName%)(operatingSystem%$ATTR_operatingSystem_OPERATOR%%$ATTR_operatingSystem%)(operatingSystemVersion%$ATTR_operatingSystemVersion_OPERATOR%%$ATTR_operatingSystemVersion%)(operatingSystemServicePack%$ATTR_operatingSystemServicePack_OPERATOR%%$ATTR_operatingSystemServicePack%)(managedBy%$ATTR_managedBy_OPERATOR%%$ATTR_managedBy%))" -attr distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% | sort > "%$LogPath%\var\var_Last_Search_DN.txt"
 		)	
 :skipSCMAS
 	:: Main output
@@ -2207,7 +3529,7 @@ GoTo jumpSGDNL
 	echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Number of search results: %$LAST_SEARCH_COUNT%	
 	IF %$LAST_SEARCH_COUNT% EQU 0 GoTo jumpSCMAL
-	echo Processing...
+	@powershell Write-Host "Processing..." -ForegroundColor DarkYellow
 	IF EXIST "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
 	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
 	type "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_N_DN.txt"
@@ -2300,7 +3622,7 @@ GoTo jumpSGDNL
 	echo Use wildcard "*"; if "*" is used alone, will search for all domain controllers. 
 	echo ^(If left blank, will abort.^)
 	SET /P $SEARCH_KEY=Choose a search key:
-	IF NOT DEFINED $SEARCH_KEY GoTo Menu
+	IF NOT DEFINED $SEARCH_KEY GoTo skipsServer
 	call :SM
 	echo Selected {%$SEARCH_KEY%} as search key.
 	SET $LAST_SEARCH_KEY=%$SEARCH_KEY%
@@ -2403,7 +3725,7 @@ GoTo sServerO
 	echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Number of search results: %$LAST_SEARCH_COUNT%
 	IF %$LAST_SEARCH_COUNT% EQU 0 GoTo skipSO
-	echo Processing...
+	@powershell Write-Host "Processing..." -ForegroundColor DarkYellow
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Server ^(DC's^) returned: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	type "%$LogPath%\var\var_Last_Search_N.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -2415,7 +3737,9 @@ GoTo sServerO
 	:: Check for local or domain user
 	if NOT "%$SESSION_USER%"=="%$DOMAIN_USER%" GoTo jumpsSL
 	:: Domain User
-
+	echo Forest and Domain Functional Level: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * domainroot -scope base -domain %$DOMAIN% -attr msDS-Behavior-Version >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Global Catalog Domain Controllers: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	DSQUERY SERVER -forest -o rdn -isgc -limit %$sLimit% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -2456,6 +3780,9 @@ GoTo skipsSL
 
 :jumpsSL
 	:: Session user is a local user
+	echo Forest and Domain Functional Level: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * domainroot -scope base -domain %$DOMAIN% -attr msDS-Behavior-Version -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Global Catalog Domain Controllers: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	DSQUERY SERVER -forest -o rdn -isgc -limit %$sLimit% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -3064,7 +4391,8 @@ SET "$DC_TAG=DS Settings"
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :subOperator
-	SET $COMPUTER_ATTR_%1=%1
+	:: Subroutine for search operators
+	SET $SEARCH_TYPE_ATTR_%1=%1
 	@powershell Write-Host " search operator:" -ForegroundColor Blue
 	echo [1] Equal [=]
 	echo [2] Approximately equal to [^~=]
@@ -3072,17 +4400,16 @@ SET "$DC_TAG=DS Settings"
 	echo [4] Greater [^>=]
 	echo.
 	Choice /c 1234
-	If ERRORLevel 4 (SET "$COMPUTER_ATTR_%1_OPERATOR=>=") & (SET "$COMPUTER_ATTR_%1_OPERATOR_DISPLAY=^>^=")
-	If ERRORLevel 3 (SET "$COMPUTER_ATTR_%1_OPERATOR=<=") & (SET "$COMPUTER_ATTR_%1_OPERATOR_DISPLAY=^<^=")
-	If ERRORLevel 2 (SET "$COMPUTER_ATTR_%1_OPERATOR=~=") & (SET "$COMPUTER_ATTR_%1_OPERATOR_DISPLAY=^~^=")
-	If ERRORLevel 1 (SET "$COMPUTER_ATTR_%1_OPERATOR==") & (SET "$COMPUTER_ATTR_%1_OPERATOR_DISPLAY=^=")
+	If ERRORLevel 4 (SET "$ATTR_%1_OPERATOR=>=") & (SET "$ATTR_%1_OPERATOR_DISPLAY=^>^=")
+	If ERRORLevel 3 (SET "$ATTR_%1_OPERATOR=<=") & (SET "$ATTR_%1_OPERATOR_DISPLAY=^<^=")
+	If ERRORLevel 2 (SET "$ATTR_%1_OPERATOR=~=") & (SET "$ATTR_%1_OPERATOR_DISPLAY=^~^=")
+	If ERRORLevel 1 (SET "$ATTR_%1_OPERATOR==") & (SET "$ATTR_%1_OPERATOR_DISPLAY=^=")
 GoTo:EOF
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :fVarD
 	:: Function Variable Debug
-	IF EXIST "%$LOGPATH%\var\Variable_Debug.txt" DEL /Q /F "%$LOGPATH%\var\Variable_Debug.txt"
-	set | FINDSTR /B /C:"$" >> "%$LOGPATH%\var\Variable_Debug.txt"
+	set | FINDSTR /B /C:"$" > "%$LOGPATH%\var\Variable_Debug_%$PID%.txt"
 GoTo:EOF
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 

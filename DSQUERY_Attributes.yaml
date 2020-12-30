@@ -18,8 +18,7 @@ Global:
  - distinguishedName
  - whenChanged
  - whenCreated
- - ADsPath 
- - managedBy
+ - ADsPath
  - objectCategory 
  - objectClass 
  - objectGUID 
@@ -37,16 +36,28 @@ Computer:
  - managedBy
 
 User:
-- userPrincipalName 
-- extensionAttribute1
-- mail 
-- mailNickname
+ - givenName
+ - directReports
+ - sn
+ - title
+ - userPrincipalName 
+ - extensionAttribute1
+ - extensionAttribute9
+ - email
+ - mail 
+ - mailNickname
+ - physicalDeliveryOfficeName
+ - manager
+ - memberOf
 
 Group:
  - member
  - primaryGroupID 
-
+ - managedBy
+ 
+ 
 Organizational Unit:
  - ou
  - gPLink
  - gPOptions
+ - managedBy

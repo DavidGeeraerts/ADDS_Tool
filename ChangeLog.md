@@ -19,6 +19,18 @@
 
 ---
 
+## Version 0.2.0 Build: 2020-12-30
+#### Added
+- PID to variable debug
+- User search
+
+#### Changed
+- echo processing... to powershell processing...
+- Variable debug uses PID in file name
+
+
+---
+
 ## Version 0.1.0 Build: 2020-12-24
 #### Added
 - Computer search
@@ -36,7 +48,6 @@
 #### Removed
 - timeout after no search results
 
----
 
 ## Version 0.0.0 Build: 2020-12-17
 #### Added

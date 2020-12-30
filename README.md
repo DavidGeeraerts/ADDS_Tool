@@ -58,7 +58,7 @@ I like the windows command shell. It does most of what's needed. When the shell 
 - [X] Settings Menu
 - [X] Logs
 - [X] Search Universal
-- [ ] Search User
+- [X] Search User
 - [X] Search Group
 - [X] Search Computer
 - [X] Search Server
