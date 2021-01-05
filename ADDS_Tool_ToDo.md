@@ -2,14 +2,10 @@
 
 ## Priority Ordered
 
- - [ ] Search Computer
- - [ ] 
  - [ ] Suppress Verbose output parameter
- - [ ] Search User --will be last
- - [ ] Dark Mode / Light Mode
- - [ ] Timeout
+ - [ ] Timeout control
  - [ ] AD Recon
-
+ - [ ] Dark Mode / Light Mode
 
 ### Done
 
@@ -20,6 +16,8 @@
  - [X] Clear Log
  - [X] Change Domain Controller
  - [X] Domain Credentials
- - [X] OU	
- - [X] Group	
- - [X] Server
+ - [X] Search OU	
+ - [X] Search Group	
+ - [X] Search Server
+ - [X] Search Computer
+ - [X] Search users

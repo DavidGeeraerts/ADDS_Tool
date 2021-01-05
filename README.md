@@ -21,7 +21,7 @@
 
 ## Documents
 
- - [changelog.md](changelog.md)
+ - [changelog.md](https://github.com/DavidGeeraerts/ADDS_Tool/blob/main/ChangeLog.md)
 
 
 ## Screenshots
@@ -42,7 +42,7 @@ The advantage of using ADDS Tool over something like [Active Directory Explorer]
  - Command shell is faster.
  - Navigating shell menu is quicker.
  - Every search is saved to log file; text files are easy to extract information from, and stores a historical search record.
- - ADDS Tool allows setting parameters, most important is the `-limit` parameter, which by default is set to `-limit 0`.
+ - ADDS Tool allows setting parameters, most important is the `-limit` parameter, which by default is set to `-limit 0`, which is no limit.
 
 *Why not PowerShell?*
 I like the windows command shell. It does most of what's needed. When the shell is lacking, PowerShell can be leveraged, which the program does.
@@ -90,8 +90,6 @@ Must be runnig with administartive privilege in order to install RSAT.
 
 
 ## Configuration
-
-
 
 
 

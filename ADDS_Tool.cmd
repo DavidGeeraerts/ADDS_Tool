@@ -1,21 +1,4 @@
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-:: Author:		David Geeraerts
-:: Location:	Olympia, Washington USA
-:: E-Mail:		dgeeraerts.evergreen@gmail.com
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-:: Copyleft License(s)
-:: GNU GPL (General Public License)
-:: https://www.gnu.org/licenses/gpl-3.0.en.html
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-
-::::::::::::::::::::::::::::::::::
-:: VERSIONING INFORMATION		::
-::  Semantic Versioning used	::
-::   http://semver.org/			::
-::	Major.Minor.Revision		::
-::::::::::::::::::::::::::::::::::
+::::ADDS Active Directory Domain Services Tool:::::::::::::::::::::::::::::::::
 
 ::#############################################################################
 ::							#DESCRIPTION#
@@ -25,26 +8,46 @@
 ::	Active Directory search's
 ::#############################################################################
 
+::::Developer::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:: Author:		David Geeraerts
+:: Location:	Olympia, Washington USA
+:: E-Mail:		dgeeraerts.evergreen@gmail.com
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+::::License::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:: Copyleft License(s)
+:: GNU GPL (General Public License)
+:: https://www.gnu.org/licenses/gpl-3.0.en.html
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+::::Versioning Schema::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::		VERSIONING INFORMATION												 ::		
+::		Semantic Versioning used											 ::
+::		http://semver.org/													 ::
+::		Major.Minor.Revision												 ::
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+::::Stopwatch start::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+@SET $START_LOAD_TIME=%TIME%
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+::::Command shell::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 @Echo Off
 @SETLOCAL enableextensions
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-@SET $START_LOAD_TIME=%TIME%
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-
-
 SET $PROGRAM_NAME=Active_Directory_Domain_Services_Tool
-SET $Version=0.2.0
-SET $BUILD=2020-12-30 10:00
+SET $Version=0.3.0
+SET $BUILD=2021-01-04 14:30
 Title %$PROGRAM_NAME%
 Prompt ADT$G
 color 8F
 mode con:cols=80
 mode con:lines=50
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+::::Configuration - Basic::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: Declare Global variables
 :: All User variables are set within here.
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: Defaults
 ::	uses user profile location for logs
 SET "$LOGPATH=%APPDATA%\ADDS"
@@ -53,14 +56,14 @@ SET $SEARCH_SESSION_LOG=ADDS_Tool_Session_Search.log
 SET $LAST_SEARCH_LOG=ADDS_Tool_Last_Search.log
 SET $ARCHIVE_LOG=ADDS_Tool_Session_Archive.log
 SET $ARCHIVE_SEARCH_LOG=ADDS_Tool_Search_Archive.log
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::::Configuration - Advanced:::::::::::::::::::::::::::::::::::::::::::::::::::
 :: Advanced Settings
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-::	Suppress_Console_Threshold
-::	too many results isn't useful to display
-SET $SUPPRESS_CONSOLE_THRESHOLD=3
+:: Suppress_Verbose Output on searches
+::	0=Off {no}; 1=On {yes}
+SET $SUPPRESS_VERBOSE=0
 
 :: Sort --the search results
 :: {0 [No] , 1 [Yes]}
@@ -81,12 +84,13 @@ SET $LOAD_SETTINGS=Yes
 :: DEBUG
 :: {0 [Off/No] , 1 [On/Yes]}
 SET $DEGUB_MODE=1
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-::##### Everything below here is 'hard-coded' [DO NOT MODIFY] #####
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::#############################################################################
+::	!!!!	Everything below here is 'hard-coded' [DO NOT MODIFY]	!!!! 
+::#############################################################################
 
+::::Default Program Variables::::::::::::::::::::::::::::::::::::::::::::::::::
 :: Program Variables
 ::	Defaults
 SET $COUNTER_SEARCH=0
@@ -107,7 +111,7 @@ SET $DSITE=Default
 IF NOT DEFINED $DOMAIN SET $DOMAIN=NA
 REM Doesn't like On Off words
 IF %$SORTED% EQU 1 (SET $SORTED_N=Yes) ELSE (SET $SORTED_N=No)
-SET $SUPPRESS_CONSOLE_THRESHOLD=3
+IF %$SUPPRESS_VERBOSE% EQU 0 (SET $SUPPRESS_VERBOSE_N=No) ELSE (SET $SUPPRESS_VERBOSE_N=Yes)
 SET $SEARCH_SETTINGS_CHECK=0
 SET $LAST_SEARCH_ATTRIBUTE=name
 :: Defaults
@@ -119,6 +123,7 @@ SET "$AD_SERVER_SEARCH=-s %$DC%"
 SET $PREREQUISITE_STATUS=1
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+::::Directory:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :CD
 	:: Launched from directory
 	SET "$PROGRAM_PATH=%~dp0"
@@ -127,6 +132,7 @@ SET $PREREQUISITE_STATUS=1
 	cd /D "%$LOGPATH%"
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+::::PID:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :PID
 	:: Program information including PID
 	tasklist /FI "WINDOWTITLE eq %$PROGRAM_NAME%*" > "%$LogPath%\var\var_TaskInfo_PID.txt"
@@ -160,6 +166,7 @@ SET $PREREQUISITE_STATUS=1
 	Echo Program Version: %$Version% >> "%$LogPath%\%$SESSION_LOG%"
 	Echo Program Build: %$BUILD% >> "%$LogPath%\%$SESSION_LOG%"
 	Echo PC: %COMPUTERNAME% >> "%$LogPath%\%$SESSION_LOG%"
+	echo PC Domain: %USERDOMAIN% >> "%$LogPath%\%$SESSION_LOG%"
 	Echo Session User: %USERNAME% >> "%$LogPath%\%$SESSION_LOG%"
 	echo PID: %$PID% >> "%$LogPath%\%$SESSION_LOG%"
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -169,7 +176,7 @@ SET $PREREQUISITE_STATUS=1
 	::	If value is 1 domain, is 0 workgroup
 	SET $DOMAIN_PC=1
 	wmic computersystem get DomainRole /value | (FIND "0") && (SET $DOMAIN_PC=0)
-	echo Domain_PC: %$DOMAIN_PC% >> "%$LogPath%\%$SESSION_LOG%"
+	echo %$DOMAIN_PC% > "%$LogPath%\var\var_$DOMAIN_PC.txt"
 	if %$DOMAIN_PC% EQU 0 SET $DOMAIN=%COMPUTERNAME%
 	if %$DOMAIN_PC% EQU 1 SET $DOMAIN=%USERDNSDOMAIN%
 	:: Can be local or domain
@@ -267,7 +274,7 @@ GoTo end
 
 :Start
 :: Capture program load time
-	@PowerShell.exe -c "$span=([datetime]'%Time%' - [datetime]'%$START_LOAD_TIME%'); '{0:00}:{1:00}:{2:00}' -f $span.Hours, $span.Minutes, $span.Seconds" > "%$LogPath%\var\var_Load_Time.txt"
+	@PowerShell.exe -c "$span=([TimeSpan]'%Time%' - [TimeSpan]'%$START_LOAD_TIME%'); '{0:00}:{1:00}:{2:00}.{3:00}' -f $span.Hours, $span.Minutes, $span.Seconds, $span.Milliseconds" > "%$LogPath%\var\var_Load_Time.txt"
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 
@@ -434,28 +441,48 @@ GoTo end
 
 :subTLT
 	:: Total Lapse Time
-	@PowerShell.exe -c "$span=([datetime]'%Time%' - [datetime]'%$START_TIME%'); '{0:00}:{1:00}:{2:00}' -f $span.Hours, $span.Minutes, $span.Seconds" > "%$LogPath%\var\var_Total_Lapsed_Time.txt"
+	@PowerShell.exe -c "$span=([TimeSpan]'%Time%' - [TimeSpan]'%$START_TIME%'); '{0:00}:{1:00}:{2:00}.{3:00}' -f $span.Hours, $span.Minutes, $span.Seconds, $span.Milliseconds" > "%$LogPath%\var\var_Total_Lapsed_Time.txt"
 	SET /P $TOTAL_LAPSE_TIME= < "%$LogPath%\var\var_Total_Lapsed_Time.txt"
 	GoTo:EOF
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+:sHeader
+	:: Search Header
+	IF EXIST "%$LogPath%\%$LAST_SEARCH_LOG%" DEL /Q "%$LogPath%\%$LAST_SEARCH_LOG%"
+	Echo Start search: %DATE% %Time% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo UTC: %$UTC% %$UTC_STANDARD_NAME% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	Echo Search Type: %$LAST_SEARCH_TYPE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Search Attribute: %$LAST_SEARCH_ATTRIBUTE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	Echo Search Term: %$SEARCH_KEY% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Search Sorted: %$SORTED_N% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Search AD Root: %$AD_BASE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Search AD Scope: %$AD_SCOPE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Domain Controller: %$DC% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	Echo Domain: %$DOMAIN% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	GoTo:EOF
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :sUniversal
 	:: Search Universal
 	SET $LAST_SEARCH_TYPE=Universal
+
+
 	call :SM
 	SET $SEARCH_KEY=
 	::	Close previous Windows
 	taskkill /F /FI "WINDOWTITLE eq %$LAST_SEARCH_LOG% - Notepad" 2>nul 1>nul
-:SUC
-	echo Choose attribute to search against:
-	echo ^(default is name^; leave blank for default^)
+	:: User input
+	SET $LAST_SEARCH_ATTRIBUTE=
+	@powershell Write-Host "Choose attribute to search against:" -ForegroundColor Gray
+	@powershell Write-Host "default is name, leave blank for default" -ForegroundColor Magenta
 	SET /P $LAST_SEARCH_ATTRIBUTE=Attribute:
 	IF NOT DEFINED $LAST_SEARCH_ATTRIBUTE SET $LAST_SEARCH_ATTRIBUTE=name
 	call :SM
-	echo use "*" wildcard, e.g. Key*, *key*
-	echo If left blank, will abort.
-	SET $SEARCH_KEY=
+	@powershell Write-Host "Attribute: %$LAST_SEARCH_ATTRIBUTE%" -ForegroundColor Blue
+	@powershell Write-Host "can use wildcard * e.g. Key*, *key*" -ForegroundColor Magenta
+	@powershell Write-Host "If left blank, will abort!" -ForegroundColor Red
+	
 	SET /P $SEARCH_KEY=Choose a search key:
 	IF NOT DEFINED $SEARCH_KEY GoTo Search
 	SET $LAST_SEARCH_KEY=%$SEARCH_KEY%
@@ -467,26 +494,32 @@ GoTo end
 	if %$AD_BASE%==forestroot SET "$AD_SERVER_SEARCH=-gc"
 	:: Start Elapse Time
 	call :subSET
-	IF EXIST "%$LogPath%\%$LAST_SEARCH_LOG%" DEL /Q "%$LogPath%\%$LAST_SEARCH_LOG%"
-	Echo Start search: %DATE% %Time% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	echo UTC: %$UTC% %$UTC_STANDARD_NAME% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	Echo Search Type: %$LAST_SEARCH_TYPE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	echo Search Attribute: %$LAST_SEARCH_ATTRIBUTE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	Echo Search Term: %$SEARCH_KEY% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	echo Search AD Root: %$AD_BASE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	echo Search AD Scope: %$AD_SCOPE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	echo Domain Controller: %$DC% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	Echo Domain: %$DOMAIN% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	:: No point in sorting since it won't match the details from attr *
-	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
-		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=*)(%$LAST_SEARCH_ATTRIBUTE%=%$SEARCH_KEY%))" %$AD_SERVER_SEARCH% -attr name distinguishedName > "%$LogPath%\var\var_Last_Search_N_DN.txt") ELSE (
-		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=*)(%$LAST_SEARCH_ATTRIBUTE%=%$SEARCH_KEY%))" -attr name distinguishedName %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% > "%$LogPath%\var\var_Last_Search_N_DN.txt"
-		)
-	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
-		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=*)(%$LAST_SEARCH_ATTRIBUTE%=%$SEARCH_KEY%))" %$AD_SERVER_SEARCH% -attr distinguishedName > "%$LogPath%\var\var_Last_Search_DN.txt") ELSE (
-		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=*)(%$LAST_SEARCH_ATTRIBUTE%=%$SEARCH_KEY%))" -attr distinguishedName %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% > "%$LogPath%\var\var_Last_Search_DN.txt"
-		)		
+	call :sHeader
+	:: Credentials
+	:: Need to set Domain credentials to something
+	SET $DOMAIN_CREDENTIALS=-UC
+	if not "%$SESSION_USER%"=="%$DOMAIN_USER%" SET "$DOMAIN_CREDENTIALS=-u %$DOMAIN_USER% -p %$cUSERPASSWORD%"
+	:: Debug
+	if %$DEGUB_MODE% EQU 1 CALL :fVarD
+	:: Check for sorted
+	if %$SORTED% EQU 1 GoTo jumpSUS
+	::	unsorted
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=*)(%$LAST_SEARCH_ATTRIBUTE%=%$SEARCH_KEY%))" -attr name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_N_DN.txt"
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=*)(%$LAST_SEARCH_ATTRIBUTE%=%$SEARCH_KEY%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_DN.txt"
+	GoTo skipSUS
+:jumpSUS
+	::	sorted
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=*)(%$LAST_SEARCH_ATTRIBUTE%=%$SEARCH_KEY%))" -attr name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_N_DN.txt"
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=*)(%$LAST_SEARCH_ATTRIBUTE%=%$SEARCH_KEY%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_DN.txt"
+:skipSUS
+	:: Munge N_DN file
+	IF EXIST "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
+	type "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_N_DN.txt"
+	:: Munge DN file
+	IF EXIST "%$LogPath%\var\var_Last_Search_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_DN_munge.txt"
+	:: Output search results		
 	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\var\var_Last_Search_N_DN.txt"') DO echo %%K > "%$LogPath%\var\var_Last_Search_Count.txt"
 	:: remove leading space
 	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\var\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\var\var_Last_Search_Count.txt"	
@@ -495,42 +528,29 @@ GoTo end
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Number of search results: %$LAST_SEARCH_COUNT%
 	IF %$LAST_SEARCH_COUNT% EQU 0 @powershell Write-Host "Nothing found! Try again with broader wildcard" -ForegroundColor Red
-	IF %$LAST_SEARCH_COUNT% EQU 0 GoTo jumpSUC
+	IF %$LAST_SEARCH_COUNT% EQU 0 GoTo skipSUC
 	@powershell Write-Host "Processing..." -ForegroundColor DarkYellow
+	echo Name					distinguishedName >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	type "%$LogPath%\var\var_Last_Search_N_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	IF %$SUPPRESS_VERBOSE% EQU 1 GoTo jumpSUO
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Verbose Output: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Detailed Output
-	if NOT "%$SESSION_USER%"=="%$DOMAIN_USER%" GoTo jumpSUL
 	FOR /F "USEBACKQ skip=1 tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
-		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%N)" -attr name %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
-		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%N)" -attr description %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
-		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%N)" -attr displayName %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
-		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%N)" -attr distinguishedName %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%N)" -attr name %$AD_SERVER_SEARCH%  %$DOMAIN_CREDENTIALS% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%N)" -attr description %$AD_SERVER_SEARCH%  %$DOMAIN_CREDENTIALS% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%N)" -attr displayName %$AD_SERVER_SEARCH%  %$DOMAIN_CREDENTIALS% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%N)" -attr distinguishedName %$AD_SERVER_SEARCH%  %$DOMAIN_CREDENTIALS% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
 		echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
 		echo Details: >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
-		DSQUERY * -filter "(distinguishedName=%%N)" -attr * %$AD_SERVER_SEARCH% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
+		DSQUERY * -filter "(distinguishedName=%%N)" -attr * %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
 		echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
 		echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%")
 	)
-GoTo SkipSUL	
-	:jumpSUL
-	:: Session user is a local user
-	FOR /F "USEBACKQ skip=1 tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
-		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%N)" -attr name %$AD_SERVER_SEARCH%  -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
-		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%N)" -attr description %$AD_SERVER_SEARCH%  -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
-		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%N)" -attr displayName %$AD_SERVER_SEARCH%  -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
-		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%N)" -attr distinguishedName %$AD_SERVER_SEARCH%  -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
-		echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
-		echo Details: >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
-		DSQUERY * -filter "(distinguishedName=%%N)" -attr * %$AD_SERVER_SEARCH%  -u %$DOMAIN_USER% -p %$cUSERPASSWORD% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
-		echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
-		echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%")
-	)
-:SkipSUL
+:jumpSUO
 	call :subTLT
 	echo Total Search Time: %$TOTAL_LAPSE_TIME%
 	echo Total Search Time: %$TOTAL_LAPSE_TIME% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -542,7 +562,7 @@ GoTo SkipSUL
 	Call :fSC
 	:: Open log files
 	@explorer "%$LogPath%\%$LAST_SEARCH_LOG%"
-:jumpSUC	
+:skipSUC	
 	echo Search Again?
 	Choice /c YN /m "[Y]es or [N]o":
 	IF %ERRORLEVEL% EQU 2 GoTo Menu
@@ -762,22 +782,22 @@ GoTo SkipSUL
 	if %$DEGUB_MODE% EQU 1 CALL :fVarD
 	if %$SORTED% EQU 1 GoTo jumpSUUS
 	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
-		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_KEY_USER_UPN%" -limit %$sLimit% %$AD_SERVER_SEARCH%  > "%$LogPath%\var\var_Last_Search_N.txt") ELSE (
-		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_KEY_USER_UPN%" -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% > "%$LogPath%\var\var_Last_Search_N.txt"
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -upn "%$SEARCH_KEY_USER_UPN%" -limit %$sLimit% %$AD_SERVER_SEARCH%  > "%$LogPath%\var\var_Last_Search_N.txt") ELSE (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -upn "%$SEARCH_KEY_USER_UPN%" -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% > "%$LogPath%\var\var_Last_Search_N.txt"
 		)
 	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
-		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_KEY_USER_UPN%"-limit %$sLimit% %$AD_SERVER_SEARCH% > "%$LogPath%\var\var_Last_Search_DN.txt") ELSE (
-		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_KEY_USER_UPN%" -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% > "%$LogPath%\var\var_Last_Search_DN.txt"
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -upn "%$SEARCH_KEY_USER_UPN%"-limit %$sLimit% %$AD_SERVER_SEARCH% > "%$LogPath%\var\var_Last_Search_DN.txt") ELSE (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -upn "%$SEARCH_KEY_USER_UPN%" -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% > "%$LogPath%\var\var_Last_Search_DN.txt"
 		)	
 	if %$SORTED% NEQ 1 GoTo skipSUUS
 :jumpSUUS
 	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
-		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_KEY_USER_UPN%" -limit %$sLimit% %$AD_SERVER_SEARCH% | sort  > "%$LogPath%\var\var_Last_Search_N.txt") ELSE (
-		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_KEY_USER_UPN%" -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% | sort > "%$LogPath%\var\var_Last_Search_N.txt"
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -upn "%$SEARCH_KEY_USER_UPN%" -limit %$sLimit% %$AD_SERVER_SEARCH% | sort  > "%$LogPath%\var\var_Last_Search_N.txt") ELSE (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -upn "%$SEARCH_KEY_USER_UPN%" -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% | sort > "%$LogPath%\var\var_Last_Search_N.txt"
 		)
 	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
-		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_KEY_USER_UPN%" -limit %$sLimit% %$AD_SERVER_SEARCH% | sort > "%$LogPath%\var\var_Last_Search_DN.txt") ELSE (
-		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_KEY_USER_UPN%" -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% | sort > "%$LogPath%\var\var_Last_Search_DN.txt"
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -upn "%$SEARCH_KEY_USER_UPN%" -limit %$sLimit% %$AD_SERVER_SEARCH% | sort > "%$LogPath%\var\var_Last_Search_DN.txt") ELSE (
+		DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -upn "%$SEARCH_KEY_USER_UPN%" -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% | sort > "%$LogPath%\var\var_Last_Search_DN.txt"
 		)	
 :skipSUUS
 	:: Main output
@@ -3614,8 +3634,8 @@ GoTo jumpSGDNL
 	:: Search Server
 	SET $LAST_SEARCH_TYPE=Server
 	SET $LAST_SEARCH_ATTRIBUTE=name
-	call :SM
 	SET $SEARCH_KEY=
+	call :SM
 	::	Close previous Windows
 	taskkill /F /FI "WINDOWTITLE eq %$LAST_SEARCH_LOG% - Notepad" 2> nul 1> nul
 
@@ -3843,7 +3863,6 @@ GoTo skipsSL
 	IF %ERRORLEVEL% EQU 1 GoTo sServer
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :sOU
 	:: Search OU
@@ -3973,22 +3992,24 @@ GoTo skipsSL
 	Echo  AD Scope: %$AD_SCOPE%
 	Echo  Query limit: %$sLimit%
 	ECHO  Sorted: %$SORTED%
-	ECHO  Suppress Console Threshold: %$SUPPRESS_CONSOLE_THRESHOLD%
+	ECHO  Suppress Verbose Output: %$SUPPRESS_VERBOSE_N%
 	ECHO ************************************************************
 	Echo.
 	Echo Choose an action from the list:
 	Echo.
 	Echo [1] Change Log Settings
 	Echo [2] Change Domain Settings
-	Echo [3] Change Search Settings
-	echo [4] Search Menu
-	Echo [5] Main menu
+	Echo [3] Change AD Settings
+	echo [4] Search Parameters
+	echo [5] Search Menu
+	Echo [6] Main menu
 	Echo.
-	Choice /c 12345
+	Choice /c 123456
 	Echo.
-	If ERRORLevel 5 GoTo Menu
-	If ERRORLevel 4 GoTo Search
-	If ERRORLevel 3 GoTo uSetS
+	If ERRORLevel 6 GoTo Menu
+	If ERRORLevel 5 GoTo Search
+	If ERRORLevel 4 GoTo uSetSP
+	If ERRORLevel 3 GoTo uSetADS
 	If ERRORLevel 2 GoTo uSetDC
 	If ERRORLevel 1 GoTo uSetL
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -4272,8 +4293,8 @@ SET "$DC_TAG=DS Settings"
 	GoTo uSetDC
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-:uSetS
-:: Search Settings
+:uSetADS
+:: Search AD Settings
 	mode con:cols=60 lines=40
 	cls
 	ECHO ************************************************************
@@ -4281,17 +4302,14 @@ SET "$DC_TAG=DS Settings"
 	echo.
 	echo		 	%DATE% %TIME%
 	echo.
-	Echo		Location: Search Settings
+	Echo		Location: AD Search Settings
 	echo.
 	ECHO ************************************************************
 	Echo.
-	IF %$SEARCH_SETTINGS_CHECK% EQU 1 GoTo jumpSSC
-	Echo Current Search Settings
+	Echo Current AD Search Settings
 	Echo ------------------------
 	Echo  AD Base: %$AD_BASE%
 	Echo  AD Scope: %$AD_SCOPE%
-	Echo  Suppress Console Threshold: %$SUPPRESS_CONSOLE_THRESHOLD%
-	Echo  Sort: %$SORTED_N%
 	Echo ------------------------
 	echo.
 	Echo %$AD_BASE%> "%$LOGPATH%\var\var_AD_Base.txt"
@@ -4304,7 +4322,7 @@ SET "$DC_TAG=DS Settings"
 	Echo.
 	Choice /c 1234
 	Echo.
-	If ERRORLevel 4 GoTo subADB
+	If ERRORLevel 4 GoTo err40
 	If ERRORLevel 3 GoTo sOU
 	If ERRORLevel 2 SET $AD_BASE=forestroot
 	If ERRORLevel 1 SET $AD_BASE=domainroot
@@ -4329,37 +4347,17 @@ SET "$DC_TAG=DS Settings"
 	If ERRORLevel 3 SET $AD_SCOPE=base
 	If ERRORLevel 2 SET $AD_SCOPE=onelevel
 	If ERRORLevel 1 SET $AD_SCOPE=subtree
-:skipASS
 
-
-	
-	echo %$SUPPRESS_CONSOLE_THRESHOLD% > "%$LOGPATH%\var\var_Suppress_Console_Threshold.txt"
-:jumpSCT	
-	echo Provide a number
-	SET /P $SUPPRESS_CONSOLE_THRESHOLD=Suppress Console Threshold:
-	echo %$SORTED% > "%$LOGPATH%\var\var_$SORTED.txt"
-	echo Provide {0 [No] , 1 [Yes]}
-	SET /P $SORTED=Sorted:
-	IF %$SORTED% LEQ 1 GoTo skipSC
-	echo %$SORTED% | (find /I "Y")
-	IF %ERRORLEVEL% EQU 0 (SET $SORTED=1) ELSE (SET $SORTED=0)
-:skipSC
-	IF %$SORTED% EQU 1 (SET $SORTED_N=Yes) ELSE (SET $SORTED_N=No)
-	SET $SEARCH_SETTINGS_CHECK=1
-	GoTo uSetS
-:jumpSSC
-	echo New Search Settings
+	echo  New Search Settings
 	Echo ------------------------
 	Echo  AD Base: %$AD_BASE%
 	Echo  AD Scope: %$AD_SCOPE%
-	Echo  Suppress Console Threshold: %$SUPPRESS_CONSOLE_THRESHOLD%
-	Echo  Sort: %$SORTED_N%
+	Echo ------------------------
 	echo.
-	echo Change Search settings?
-	SET $SEARCH_SETTINGS_CHECK=0
+	echo Change AD Search settings?
 	Choice /c yn /m "[y]es or [n]o":
 	IF %ERRORLEVEL% EQU 2 GoTo Uset
-	IF %ERRORLEVEL% EQU 1 GoTo uSetS
+	IF %ERRORLEVEL% EQU 1 GoTo uSetADS
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :subADB
@@ -4367,9 +4365,60 @@ SET "$DC_TAG=DS Settings"
 	IF NOT EXIST "%$LOGPATH%\var\var_OU_Base.txt" GoTo skipADB
 	SET /P $AD_BASE= < "%$LOGPATH%\var\var_OU_Base.txt"
 :skipADB
-	IF NOT DEFINED $AD_BASE GoTo uSetS
-	IF NOT EXIST "%$LOGPATH%\var\var_OU_Base.txt" GoTo uSetS
+	IF NOT DEFINED $AD_BASE GoTo uSetADS
+	IF NOT EXIST "%$LOGPATH%\var\var_OU_Base.txt" GoTo uSetADS
 	GoTo subADbase
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+:uSetSP
+:: Search parametrs Settings
+	mode con:cols=60 lines=40
+	cls
+	ECHO ************************************************************
+	ECHO		%$PROGRAM_NAME% %$VERSION%
+	echo.
+	echo		 	%DATE% %TIME%
+	echo.
+	Echo		Location: Search Parameters
+	echo.
+	ECHO ************************************************************
+	echo.
+	Echo ------------------------
+	Echo  Sort: %$SORTED_N%
+	Echo  Suppress Verbose Output: %$SUPPRESS_VERBOSE_N%
+	Echo ------------------------
+	echo.
+	::	Sorted
+	echo %$SORTED% > "%$LOGPATH%\var\var_$SORTED.txt"
+	echo Sorted search results?
+	echo.
+	echo [1] 1=On	{yes}
+	echo [2] 0=Off	{no}
+	Choice /c 12
+	If ERRORLevel 2 (SET $SORTED=0) & (SET $SORTED_N=No)
+	If ERRORLevel 1 (SET $SORTED=1) & (SET $SORTED_N=Yes)
+	echo.
+	::	Suppress Verbose Output
+	::	Capture current setting
+	echo %$SUPPRESS_VERBOSE% > "%$LOGPATH%\var\var_$SUPPRESS_VERBOSE.txt"
+	echo Suppress Verbose output on search results:
+	echo.
+	echo [1] 1=On	{yes}
+	echo [2] 0=Off	{no}
+	Choice /c 12
+	If ERRORLevel 2 (SET $SUPPRESS_VERBOSE=0) & (SET $SUPPRESS_VERBOSE_N=No)
+	If ERRORLevel 1 (SET $SUPPRESS_VERBOSE=1) & (SET $SUPPRESS_VERBOSE_N=Yes)
+	echo.
+	echo  New Search parameters
+	Echo ------------------------
+	Echo  Suppress Verbose Output: %$SUPPRESS_VERBOSE_N%
+	Echo  Sort: %$SORTED_N%
+	Echo ------------------------
+	echo.
+	echo Change Search parameters?
+	Choice /c yn /m "[y]es or [n]o":
+	IF %ERRORLEVEL% EQU 2 GoTo Uset
+	IF %ERRORLEVEL% EQU 1 GoTo uSetSP
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 

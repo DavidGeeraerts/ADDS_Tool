@@ -19,6 +19,23 @@
 
 ---
 
+## Version 0.3.0 Build: 2021-01-04
+#### Added
+- Suppress verbose output. Off by default.
+
+#### Changed
+- Universal search will be a template for all other searches
+- Code style for blocks
+- use of [TimeSpan] instead of [dateTime] for stopwatch
+- Log output header is now subroutine
+- more powershell color text
+
+#### Fixed
+- Stop watch for searches
+- User UPN search
+
+---
+
 ## Version 0.2.0 Build: 2020-12-30
 #### Added
 - PID to variable debug
@@ -28,8 +45,6 @@
 - echo processing... to powershell processing...
 - Variable debug uses PID in file name
 
-
----
 
 ## Version 0.1.0 Build: 2020-12-24
 #### Added
