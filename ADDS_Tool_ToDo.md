@@ -2,13 +2,14 @@
 
 ## Priority Ordered
 
- - [ ] Suppress Verbose output parameter
+
  - [ ] Timeout control
  - [ ] AD Recon
  - [ ] Dark Mode / Light Mode
 
 ### Done
 
+ - [X] Suppress Verbose output parameter
  - [X] include UTC
  - [X] Include ISO8601
  - [X] Search lapse time

@@ -7,3 +7,4 @@
 - Using dsquery computer `-name` with `-desc *` only returns those computers with a description.
 - Using DSQUERY * -filter managedBy, must be the complete DN --* doesn't work
 - Can use this [epochconverter website](https://www.epochconverter.com/ldap) to convert NT time both ways.
+- Search Attribute: groupType Search Term: -2147483643 # Built in security groups

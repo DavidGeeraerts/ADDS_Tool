@@ -19,6 +19,20 @@
 
 ---
 
+## Version 0.4.0 Build: 2021-01-08
+#### Added
+- Visual processing in Universal search
+
+#### Changed
+- Banner formatting
+- User searchs navigation menu go back to user search
+- Menu Logs now opens directory to logs 
+
+#### Fixed
+- Setting custom domain credentials
+
+---
+
 ## Version 0.3.0 Build: 2021-01-04
 #### Added
 - Suppress verbose output. Off by default.
@@ -34,7 +48,6 @@
 - Stop watch for searches
 - User UPN search
 
----
 
 ## Version 0.2.0 Build: 2020-12-30
 #### Added

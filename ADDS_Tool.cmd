@@ -35,8 +35,8 @@
 @Echo Off
 @SETLOCAL enableextensions
 SET $PROGRAM_NAME=Active_Directory_Domain_Services_Tool
-SET $Version=0.3.0
-SET $BUILD=2021-01-04 14:30
+SET $Version=0.4.0
+SET $BUILD=2021-01-08 09:45
 Title %$PROGRAM_NAME%
 Prompt ADT$G
 color 8F
@@ -121,32 +121,34 @@ SET "$AD_SERVER_SEARCH=-s %$DC%"
 :: Dependency Checks
 ::	assumes ready to go
 SET $PREREQUISITE_STATUS=1
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-::::Directory:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::::Directory::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :CD
 	:: Launched from directory
 	SET "$PROGRAM_PATH=%~dp0"
 	::	Setup logging
 	IF NOT EXIST "%$LOGPATH%\var" MD "%$LOGPATH%\var"
 	cd /D "%$LOGPATH%"
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-::::PID:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::::PID::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :PID
 	:: Program information including PID
 	tasklist /FI "WINDOWTITLE eq %$PROGRAM_NAME%*" > "%$LogPath%\var\var_TaskInfo_PID.txt"
 	for /F "skip=3 tokens=2 delims= " %%P IN ('tasklist /FI "WINDOWTITLE eq %$PROGRAM_NAME%*"') DO echo %%P> "%$LogPath%\var\var_$PID.txt"
 	SET /P $PID= < "%$LogPath%\var\var_$PID.txt"
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+::::fISO8601:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :fISO8601
 	:: Function to ensure ISO 8601 Date format yyyy-mmm-dd
 	:: Easiest way to get ISO date
 	@powershell Get-Date -format "yyyy-MM-dd" > "%$LogPath%\var\var_ISO8601_Date.txt"
 	SET /P $ISO_DATE= < "%$LogPath%\var\var_ISO8601_Date.txt"
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+::::UTC::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :UTC
 	:: Universal Time Coordinate
 	IF EXIST "%$LogPath%\var\var_$UTC.txt" SET /P $UTC= < "%$LogPath%\var\var_$UTC.txt"
@@ -155,9 +157,9 @@ SET $PREREQUISITE_STATUS=1
 	IF EXIST "%$LogPath%\var\var_$UTC_STANDARD_NAME.txt" SET /P $UTC_STANDARD_NAME= < "%$LogPath%\var\var_$UTC_STANDARD_NAME.txt"
 	IF NOT DEFINED $UTC_STANDARD_NAME FOR /F "tokens=2 delims==" %%P IN ('wmic timezone get StandardName /value ^| findstr /C:"=" /I') DO ECHO %%P > "%$LogPath%\var\var_$UTC_STANDARD_NAME.txt"
 	IF NOT DEFINED $UTC_STANDARD_NAME SET /P $UTC_STANDARD_NAME= < "%$LogPath%\var\var_$UTC_STANDARD_NAME.txt"
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-
+::::Session Log Header:::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :wLog
 	:: Start session and write to log
 	Echo Start Session %DATE% %TIME% > "%$LogPath%\%$SESSION_LOG%"
@@ -169,8 +171,9 @@ SET $PREREQUISITE_STATUS=1
 	echo PC Domain: %USERDOMAIN% >> "%$LogPath%\%$SESSION_LOG%"
 	Echo Session User: %USERNAME% >> "%$LogPath%\%$SESSION_LOG%"
 	echo PID: %$PID% >> "%$LogPath%\%$SESSION_LOG%"
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+::::Computer Domain::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :DUC
 	::	Check for Domain computer
 	::	If value is 1 domain, is 0 workgroup
@@ -201,6 +204,7 @@ SET $PREREQUISITE_STATUS=1
 	if %$DOMAIN_PC% EQU 0 SET $DOMAIN_PC_N=workgroup
 	if %$DOMAIN_PC% EQU 1 SET $DOMAIN_PC_N=domain
 	echo workgroup else echo domain)
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -342,7 +346,6 @@ GoTo end
 	echo		 	%DATE% %TIME%
 	ECHO.
 	Echo		Location: Search Menu     
-	echo.
 	Echo ******************************************************
 	Echo.
 	Echo Search Settings
@@ -351,6 +354,7 @@ GoTo end
 	Echo  AD Scope: %$AD_SCOPE%
 	Echo  Query limit: %$sLimit%
 	echo  Sorted: %$SORTED_N%
+	echo  Suppress Verbose: %$Suppress_Verbose_N%
 	Echo  Last Search Type: %$LAST_SEARCH_TYPE%
 	Echo  Search count: %$COUNTER_SEARCH%
 	Echo ******************************************************
@@ -415,6 +419,7 @@ GoTo end
 	Echo  AD Scope: %$AD_SCOPE%
 	Echo  Query limit: %$sLimit%
 	echo  Sorted: %$SORTED_N%
+	echo  Suppress Verbose: %$Suppress_Verbose_N%
 	echo.
 	echo Search HUD
 	Echo ------------------------
@@ -461,26 +466,31 @@ GoTo end
 	Echo Domain: %$DOMAIN% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	GoTo:EOF
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+::::Search Universal:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :sUniversal
 	:: Search Universal
+	:: 	Reset search variables for HUD
 	SET $LAST_SEARCH_TYPE=Universal
-
-
-	call :SM
-	SET $SEARCH_KEY=
+	SET $LAST_SEARCH_ATTRIBUTE=
+	SET $LAST_SEARCH_KEY=
+	SET $LAST_SEARCH_COUNT=
 	::	Close previous Windows
 	taskkill /F /FI "WINDOWTITLE eq %$LAST_SEARCH_LOG% - Notepad" 2>nul 1>nul
+	call :SM
+	SET "$ATTRIBUTES_Universal=name cn displayName distinguishedName extensionAttribute<#> objectSid"
+	@powershell Write-Host "Universal Attributes:" -ForegroundColor Gray
+	@powershell Write-Host "%$ATTRIBUTES_Universal%" -ForegroundColor Blue
 	:: User input
-	SET $LAST_SEARCH_ATTRIBUTE=
+
 	@powershell Write-Host "Choose attribute to search against:" -ForegroundColor Gray
 	@powershell Write-Host "default is name, leave blank for default" -ForegroundColor Magenta
 	SET /P $LAST_SEARCH_ATTRIBUTE=Attribute:
 	IF NOT DEFINED $LAST_SEARCH_ATTRIBUTE SET $LAST_SEARCH_ATTRIBUTE=name
 	call :SM
 	@powershell Write-Host "Attribute: %$LAST_SEARCH_ATTRIBUTE%" -ForegroundColor Blue
-	@powershell Write-Host "can use wildcard * e.g. Key*, *key*" -ForegroundColor Magenta
+	@powershell Write-Host "can use wildcard * :  Key* *Key *key*" -ForegroundColor Gray
 	@powershell Write-Host "If left blank, will abort!" -ForegroundColor Red
 	
 	SET /P $SEARCH_KEY=Choose a search key:
@@ -496,22 +506,37 @@ GoTo end
 	call :subSET
 	call :sHeader
 	:: Credentials
-	:: Need to set Domain credentials to something
-	SET $DOMAIN_CREDENTIALS=-UC
+	:: Domain credentials default to blank
+	SET $DOMAIN_CREDENTIALS=
 	if not "%$SESSION_USER%"=="%$DOMAIN_USER%" SET "$DOMAIN_CREDENTIALS=-u %$DOMAIN_USER% -p %$cUSERPASSWORD%"
 	:: Debug
 	if %$DEGUB_MODE% EQU 1 CALL :fVarD
 	:: Check for sorted
 	if %$SORTED% EQU 1 GoTo jumpSUS
 	::	unsorted
-		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=*)(%$LAST_SEARCH_ATTRIBUTE%=%$SEARCH_KEY%))" -attr name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_N_DN.txt"
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=*)(%$LAST_SEARCH_ATTRIBUTE%=%$SEARCH_KEY%))" -attr name displayName distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_N_DN.txt"
 		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=*)(%$LAST_SEARCH_ATTRIBUTE%=%$SEARCH_KEY%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_DN.txt"
 	GoTo skipSUS
 :jumpSUS
 	::	sorted
-		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=*)(%$LAST_SEARCH_ATTRIBUTE%=%$SEARCH_KEY%))" -attr name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_N_DN.txt"
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=*)(%$LAST_SEARCH_ATTRIBUTE%=%$SEARCH_KEY%))" -attr name displayName distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_N_DN.txt"
 		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=*)(%$LAST_SEARCH_ATTRIBUTE%=%$SEARCH_KEY%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_DN.txt"
 :skipSUS
+
+	:: Check results
+	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\var\var_Last_Search_N_DN.txt"') DO echo %%K > "%$LogPath%\var\var_Last_Search_Count.txt"	
+	:: remove leading space
+	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\var\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\var\var_Last_Search_Count.txt"
+	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\var\var_Last_Search_Count.txt"
+	call :SM
+	IF %$LAST_SEARCH_COUNT% EQU 0 (
+		echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+		echo End search: %DATE% %Time% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+		TYPE "%$LogPath%\%$LAST_SEARCH_LOG%" >> "%$SEARCH_SESSION_LOG%"
+		@powershell Write-Host "Nothing found! Try again with broader wildcard" -ForegroundColor Red
+		GoTo skipSUC
+	)
+	
 	:: Munge N_DN file
 	IF EXIST "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
 	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
@@ -519,18 +544,13 @@ GoTo end
 	:: Munge DN file
 	IF EXIST "%$LogPath%\var\var_Last_Search_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_DN_munge.txt"
 	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_DN_munge.txt"
+	type "%$LogPath%\var\var_Last_Search_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_DN.txt"
 	:: Output search results		
-	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\var\var_Last_Search_N_DN.txt"') DO echo %%K > "%$LogPath%\var\var_Last_Search_Count.txt"
-	:: remove leading space
-	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\var\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\var\var_Last_Search_Count.txt"	
-	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\var\var_Last_Search_Count.txt"	
 	echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Number of search results: %$LAST_SEARCH_COUNT%
-	IF %$LAST_SEARCH_COUNT% EQU 0 @powershell Write-Host "Nothing found! Try again with broader wildcard" -ForegroundColor Red
-	IF %$LAST_SEARCH_COUNT% EQU 0 GoTo skipSUC
 	@powershell Write-Host "Processing..." -ForegroundColor DarkYellow
-	echo Name					distinguishedName >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Name					displayName			distinguishedName >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	type "%$LogPath%\var\var_Last_Search_N_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	IF %$SUPPRESS_VERBOSE% EQU 1 GoTo jumpSUO
@@ -539,7 +559,14 @@ GoTo end
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Detailed Output
-	FOR /F "USEBACKQ skip=1 tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
+	REM powershell write output adds slight overhead.
+	REM	e.g. 293 sarch result:
+	REM powershell	Total Search Time: 00:07:52.610 
+	REM echo		Total Search Time: 00:05:34.370
+	FOR /F "tokens=* delims=" %%N IN (%$LogPath%\var\var_Last_Search_DN.txt) DO (
+		(call :SM) & (
+		@powershell Write-Host "Processing verbose..." -ForegroundColor DarkYellow) & (
+		@powershell Write-Host "%%N" -ForegroundColor DarkGray) & (
 		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%N)" -attr name %$AD_SERVER_SEARCH%  %$DOMAIN_CREDENTIALS% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
 		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%N)" -attr description %$AD_SERVER_SEARCH%  %$DOMAIN_CREDENTIALS% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
 		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%N)" -attr displayName %$AD_SERVER_SEARCH%  %$DOMAIN_CREDENTIALS% >> "%$LogPath%\%$LAST_SEARCH_LOG%") & (
@@ -552,18 +579,20 @@ GoTo end
 	)
 :jumpSUO
 	call :subTLT
+	:: Search counter increment
+	Call :fSC
+	:: Refresh HUD
+	call :SM
 	echo Total Search Time: %$TOTAL_LAPSE_TIME%
 	echo Total Search Time: %$TOTAL_LAPSE_TIME% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo End search: %DATE% %Time% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	type "%$LogPath%\%$LAST_SEARCH_LOG%" >> "%$LogPath%\%$SEARCH_SESSION_LOG%"
-	:: Search counter increment
-	Call :fSC
 	:: Open log files
 	@explorer "%$LogPath%\%$LAST_SEARCH_LOG%"
-:skipSUC	
-	echo Search Again?
+:skipSUC
+	@powershell Write-Host "Search Again?" -ForegroundColor Gray
 	Choice /c YN /m "[Y]es or [N]o":
 	IF %ERRORLEVEL% EQU 2 GoTo Menu
 	IF %ERRORLEVEL% EQU 1 GoTo sUniversal
@@ -744,7 +773,7 @@ GoTo end
 :skipSUN
 	echo Search User Again?
 	Choice /c YN /m "[Y]es or [N]o":
-	IF %ERRORLEVEL% EQU 2 GoTo Search
+	IF %ERRORLEVEL% EQU 2 GoTo sUser
 	IF %ERRORLEVEL% EQU 1 GoTo SUN
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::	
 
@@ -892,7 +921,7 @@ GoTo end
 :skipSUU
 	echo Search User Again?
 	Choice /c YN /m "[Y]es or [N]o":
-	IF %ERRORLEVEL% EQU 2 GoTo Search
+	IF %ERRORLEVEL% EQU 2 GoTo sUser
 	IF %ERRORLEVEL% EQU 1 GoTo SUU	
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -1065,7 +1094,7 @@ GoTo end
 :skipSUFL
 	echo Search User Again?
 	Choice /c YN /m "[Y]es or [N]o":
-	IF %ERRORLEVEL% EQU 2 GoTo Search
+	IF %ERRORLEVEL% EQU 2 GoTo sUser
 	IF %ERRORLEVEL% EQU 1 GoTo SUFL
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -1225,7 +1254,7 @@ GoTo end
 :skipSUDN
 	echo Search User Again?
 	Choice /c YN /m "[Y]es or [N]o":
-	IF %ERRORLEVEL% EQU 2 GoTo Search
+	IF %ERRORLEVEL% EQU 2 GoTo sUser
 	IF %ERRORLEVEL% EQU 1 GoTo SUDN
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -1239,7 +1268,7 @@ GoTo end
 	SET "$ATTRIBUTES_USER=cn department description directReports displayName email extensionAttribute# givenName l mail mailNickname manager memberOf name physicalDeliveryOfficeName postalCode userPrincipalName sn st title telephoneNumber"
 	call :SM
 	@powershell Write-Host "Custom-Attribute:" -ForegroundColor Gray
-	@powershell Write-Host "cn department description directReports displayName email extensionAttribute# givenName l mail mailNickname manager memberOf name physicalDeliveryOfficeName postalCode userPrincipalName sn st title telephoneNumber" -ForegroundColor Blue
+	@powershell Write-Host "%$ATTRIBUTES_USER%" -ForegroundColor Blue
 	echo ----------------------------------------
 	echo.
 	:: Choose custom user attribute
@@ -1591,7 +1620,7 @@ GoTo end
 :skipSUGI
 	echo Search User Again?
 	Choice /c YN /m "[Y]es or [N]o":
-	IF %ERRORLEVEL% EQU 2 GoTo Search
+	IF %ERRORLEVEL% EQU 2 GoTo sUser
 	IF %ERRORLEVEL% EQU 1 GoTo SUGI
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -1747,7 +1776,7 @@ GoTo end
 :skipSUGS
 	echo Search User Again?
 	Choice /c YN /m "[Y]es or [N]o":
-	IF %ERRORLEVEL% EQU 2 GoTo Search
+	IF %ERRORLEVEL% EQU 2 GoTo sUser
 	IF %ERRORLEVEL% EQU 1 GoTo SUGS
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::	
 
@@ -1895,7 +1924,7 @@ GoTo end
 :skipSUGD
 	echo Search User Again?
 	Choice /c YN /m "[Y]es or [N]o":
-	IF %ERRORLEVEL% EQU 2 GoTo Search
+	IF %ERRORLEVEL% EQU 2 GoTo sUser
 	IF %ERRORLEVEL% EQU 1 GoTo SUGD	
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -4094,7 +4123,7 @@ SET "$DC_TAG=DS Settings"
 	Echo [2] Change Domain Controller
 	Echo [3] Change Domain
 	echo [4] Chanage Domain Site
-	echo [5] Back Settings
+	echo [5] Settings
 	Echo [6] Main menu
 	Echo.
 	Choice /c 123456
@@ -4123,38 +4152,49 @@ SET "$DC_TAG=DS Settings"
 	Echo just hit enter and leave blank.
 	echo.
 	echo %$DOMAIN_USER%> "%$LOGPATH%\var\var_$DOMAIN_USER.txt"
+	IF DEFINED $cUSERPASSWORD echo %$cUSERPASSWORD%> "%$LOGPATH%\var\var_$cUSERPASSWORD.txt"
 	echo Provide Credentials ^(searches Name ^& UPN^)
+	@powershell Write-Host "Leave password blank to abort!" -ForegroundColor Cyan
+	SET $cUSERPASSWORD=
 	SET /P $DOMAIN_USER=UserName:
 	SET /P $cUSERPASSWORD=Password:
+	IF NOT DEFINED $cUSERPASSWORD (
+		SET /P $cUSERPASSWORD= <  "%$LOGPATH%\var\var_$cUSERPASSWORD.txt"
+		DEL /F /Q "%$LOGPATH%\var\var_$cUSERPASSWORD.txt"
+		GoTo uSetDC
+	)
 	:: Using name search
 	dsquery user forestroot -o rdn -scope subtree -domain %$domain% -name "%$DOMAIN_USER%" -u %$DOMAIN_USER% -p %$cUSERPASSWORD% -limit %$sLimit% -uc 2> nul 1> "%$LOGPATH%\var\var_Custom_User_Domain_Authentication.txt"
 	::	mainly to capture authentication faliure
 	SET $DA_QUERY_RESULT=%ERRORLEVEL%
 	IF NOT DEFINED $DA_QUERY_RESULT SET $DA_QUERY_RESULT=0
 	echo %$DA_QUERY_RESULT% > "%$LOGPATH%\var\var_$DA_QUERY_RESULT.txt"
+	:: skip if name search succeded
+	IF %$DA_QUERY_RESULT% EQU 0 GoTo skipDAupn
+	:: Check UPN search
+	IF %$DA_QUERY_RESULT% NEQ 0 dsquery user forestroot -o rdn -scope subtree -domain %$domain% -UPN "%$DOMAIN_USER%*" -u %$DOMAIN_USER% -p %$cUSERPASSWORD% -limit %$sLimit% -uc 2> nul 1> "%$LOGPATH%\var\var_Custom_User_Domain_Authentication.txt"
+	SET $DA_QUERY_RESULT=%ERRORLEVEL%
+	IF NOT DEFINED $DA_QUERY_RESULT SET $DA_QUERY_RESULT=0	
+	echo %$DA_QUERY_RESULT% > "%$LOGPATH%\var\var_$DA_QUERY_RESULT.txt"
+:skipDAupn	
+	
 	::	Athentication error -2147023570
 	IF %$DA_QUERY_RESULT% EQU -2147023570 (
-		SET /P $DOMAIN_USER= < "%$LOGPATH%\var\var_$DOMAIN_USER.txt") & (
-		ECHO Authentication failed!) & (
-		echo.) & (
-		Timeout /t 10) & (
-		GoTo subDA
-		)
+		SET /P $DOMAIN_USER= < "%$LOGPATH%\var\var_$DOMAIN_USER.txt"
+		DEL /F /Q "%$LOGPATH%\var\var_$cUSERPASSWORD.txt"
+		@powershell Write-Host "Authentication failed!" -ForegroundColor Red
+		echo.
+		@powershell Write-Host "Try again?" -ForegroundColor white
+	)
+	IF %$DA_QUERY_RESULT% NEQ -2147023570 GoTo skipDACh
+	REM choice didn't work in the IF satement, likely needs DELAYEDEXPANSION, which I don't want to do.
+	Choice /c yn /m "[y]es or [n]o":
+		IF %ERRORLEVEL% EQU 2 GoTo uSetDC
+		IF %ERRORLEVEL% EQU 1 GoTo subDA
+:skipDACh
 	echo.
-	SET /P $CHECK_CUSTOM_USER_DOMAIN_ATHENTICATION= < "%$LOGPATH%\var\var_Custom_User_Domain_Authentication.txt"
-	::Will contain double quotes to remove
-	FOR /F "usebackq delims=" %%P IN ('%$CHECK_CUSTOM_USER_DOMAIN_ATHENTICATION%') DO SET $CHECK_CUSTOM_USER_DOMAIN_ATHENTICATION=%%~P
-	:: Using UPN search
-	IF NOT DEFINED $CHECK_CUSTOM_USER_DOMAIN_ATHENTICATION dsquery user forestroot -o rdn -scope subtree -domain %$domain% -UPN "%$DOMAIN_USER%*" -u %$DOMAIN_USER% -p %$cUSERPASSWORD% -limit %$sLimit% -uc 2> nul 1> "%$LOGPATH%\var\var_Custom_User_Domain_Authentication.txt"
-	SET /P $CHECK_CUSTOM_USER_DOMAIN_ATHENTICATION= < "%$LOGPATH%\var\var_Custom_User_Domain_Authentication.txt"
-	::Will contain double quotes to remove
-	FOR /F "usebackq delims=" %%P IN ('%$CHECK_CUSTOM_USER_DOMAIN_ATHENTICATION%') DO SET $CHECK_CUSTOM_USER_DOMAIN_ATHENTICATION=%%~P
-	SET $DA_VALID=0
-	IF NOT DEFINED $CHECK_CUSTOM_USER_DOMAIN_ATHENTICATION SET $DA_VALID=1
-	IF %$DA_VALID% EQU 0 SET $DU=1
-	IF %$DA_VALID% EQU 1 GoTo subDA
 	echo Domain User Name: %$DOMAIN_USER% ^(%$CHECK_CUSTOM_USER_DOMAIN_ATHENTICATION%^) >> "%$LOGPATH%\ADDS_Tool_Active_Session.log"
-	echo Success!
+	@powershell Write-Host "Success!" -ForegroundColor Green
 	timeout /t 10
 	IF /I "%COMPUTERNAME%"=="%$DC%" GoTo subDC
 	GoTo uSetDC
@@ -4355,7 +4395,7 @@ SET "$DC_TAG=DS Settings"
 	Echo ------------------------
 	echo.
 	echo Change AD Search settings?
-	Choice /c yn /m "[y]es or [n]o":
+	Choice /c 12 /m "[y]es or [n]o":
 	IF %ERRORLEVEL% EQU 2 GoTo Uset
 	IF %ERRORLEVEL% EQU 1 GoTo uSetADS
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -4419,14 +4459,11 @@ SET "$DC_TAG=DS Settings"
 	Choice /c yn /m "[y]es or [n]o":
 	IF %ERRORLEVEL% EQU 2 GoTo Uset
 	IF %ERRORLEVEL% EQU 1 GoTo uSetSP
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-
+::::Logs:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :Logs
-	IF EXIST "%$LOGPATH%\ADDS_Tool_Active_Session.log" @explorer "%$LOGPATH%\ADDS_Tool_Active_Session.log"
-	IF EXIST "%$LOGPATH%\ADDS_Search_Session.log" @explorer "%$LOGPATH%\ADDS_Search_Session.log"
-	IF EXIST "%$LOGPATH%\ADDS_Tool_Last_Search.log" @explorer "%$LOGPATH%\ADDS_Tool_Last_Search.log"
-	IF EXIST "%$LOGPATH%\var\var_Last_Search_N_DN.txt" @explorer "%$LOGPATH%\var\var_Last_Search_N_DN.txt"
+	IF EXIST "%$LOGPATH%\" @explorer "%$LOGPATH%\"
 	GoTo menu
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
