@@ -19,6 +19,20 @@
 
 ---
 
+## Version 0.5.0 Build: 2021-01-15
+#### Added
+- SHA256 file for commandlet
+
+#### Changed
+- Close last search log is now a subroutine
+- Search by User name updated with template
+- changed location for documents to /docs
+
+#### Fixed
+- formatting 
+
+---
+
 ## Version 0.4.0 Build: 2021-01-08
 #### Added
 - Visual processing in Universal search
@@ -31,7 +45,6 @@
 #### Fixed
 - Setting custom domain credentials
 
----
 
 ## Version 0.3.0 Build: 2021-01-04
 #### Added
