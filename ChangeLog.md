@@ -19,6 +19,20 @@
 
 ---
 
+## Version 0.6.0 Build: 2021-01-22
+#### Added
+- sAMaccount to Universal attribute list
+
+#### Changed
+- Search by User UPN updated with template
+- search variables with "Last" prefix, dropped prefix. 
+
+#### Removed
+- Last Search type from Search main menu
+
+---
+
+
 ## Version 0.5.0 Build: 2021-01-15
 #### Added
 - SHA256 file for commandlet
@@ -31,7 +45,6 @@
 #### Fixed
 - formatting 
 
----
 
 ## Version 0.4.0 Build: 2021-01-08
 #### Added
