@@ -19,6 +19,12 @@
 
 ---
 
+## Version 0.7.0 Build: 2021-01-26
+#### Changed
+- Search by User First and last name updated with template
+
+---
+
 ## Version 0.6.0 Build: 2021-01-22
 #### Added
 - sAMaccount to Universal attribute list
@@ -29,8 +35,6 @@
 
 #### Removed
 - Last Search type from Search main menu
-
----
 
 
 ## Version 0.5.0 Build: 2021-01-15
