@@ -19,11 +19,18 @@
 
 ---
 
+## Version 0.8.0 Build: 2021-01-27
+#### Changed
+- Search by User displayName updated with template
+- Search by User Custom Attributes updated with template
+
+---
+
+
 ## Version 0.7.0 Build: 2021-01-26
 #### Changed
 - Search by User First and last name updated with template
 
----
 
 ## Version 0.6.0 Build: 2021-01-22
 #### Added
