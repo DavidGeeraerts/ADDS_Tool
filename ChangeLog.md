@@ -19,13 +19,19 @@
 
 ---
 
+## Version 0.9.0 Build: 2021-01-28
+#### Changed
+- Search by User global inactive updated with template
+- Search by User global stalepassword updated with template
+- Search by User global disabbled updated with template
+
+---
+
+
 ## Version 0.8.0 Build: 2021-01-27
 #### Changed
 - Search by User displayName updated with template
 - Search by User Custom Attributes updated with template
-
----
-
 
 ## Version 0.7.0 Build: 2021-01-26
 #### Changed
