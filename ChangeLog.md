@@ -19,13 +19,25 @@
 
 ---
 
+## Version 0.10.0 Build: 2021-01-29
+#### Changed
+- Search by Group name updated with template
+- Search by Group description Search  updated with template
+- Search by Group DisplayName updated with template
+- Search by Group multi attribute updated with template
+- Search by Computer name updated with template
+
+#### Removed
+- mode con:lines outside of primary
+
+---
+
+
 ## Version 0.9.0 Build: 2021-01-28
 #### Changed
 - Search by User global inactive updated with template
 - Search by User global stalepassword updated with template
 - Search by User global disabbled updated with template
-
----
 
 
 ## Version 0.8.0 Build: 2021-01-27
