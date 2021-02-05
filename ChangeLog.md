@@ -19,6 +19,26 @@
 
 ---
 
+## Version 0.11.0 Build: 2021-02-05
+#### Changed
+- Search by Computer Advanced updated with template
+- Search by computer disabled Search  updated with template
+- Search by Computers inactive updated with template
+- Search by Computers with stale passwords updated with template
+- Search by Search Computer Time Series attributes updated with template
+- Search by Computer LogonCount updated with template
+- Search by Computer Multiple Attributes updated with template
+- Search by Server updated with template
+
+#### Fixed
+- Powershell console output literal string during Processing verbose
+
+#### Removed
+- trailing spaces
+
+---
+
+
 ## Version 0.10.0 Build: 2021-01-29
 #### Changed
 - Search by Group name updated with template
@@ -29,8 +49,6 @@
 
 #### Removed
 - mode con:lines outside of primary
-
----
 
 
 ## Version 0.9.0 Build: 2021-01-28
