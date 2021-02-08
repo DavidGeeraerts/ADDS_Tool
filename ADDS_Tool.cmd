@@ -1,4 +1,4 @@
-::::ADDS Active Directory Domain Services Tool:::::::::::::::::::::::::::::::::
+:::: Active Directory Domain Services Tool [ADDS] :::::::::::::::::::::::::::::
 
 ::#############################################################################
 ::							#DESCRIPTION#
@@ -8,47 +8,46 @@
 ::	Active Directory search's
 ::#############################################################################
 
-::::Developer::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::: Developer ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: Author:		David Geeraerts
 :: Location:	Olympia, Washington USA
 :: E-Mail:		dgeeraerts.evergreen@gmail.com
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-::::GitHub:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::: GitHub :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::	https://github.com/DavidGeeraerts/ADDS_Tool
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-::::License::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::: License ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: Copyleft License(s)
 :: GNU GPL v3 (General Public License)
 :: https://www.gnu.org/licenses/gpl-3.0.en.html
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-::::Versioning Schema::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::: Versioning Schema ::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::		VERSIONING INFORMATION												 ::
 ::		Semantic Versioning used											 ::
 ::		http://semver.org/													 ::
 ::		Major.Minor.Revision												 ::
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-::::Stopwatch start::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::: Stopwatch start ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 @SET $START_LOAD_TIME=%TIME%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-::::Command shell::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::: Command shell ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 @Echo Off
 @SETLOCAL enableextensions
 SET $PROGRAM_NAME=Active_Directory_Domain_Services_Tool
-SET $Version=0.11.0
-SET $BUILD=2021-02-05 09:00
+SET $Version=0.12.0
+SET $BUILD=2021-02-08 08:00
 Title %$PROGRAM_NAME%
 Prompt ADT$G
 color 8F
-mode con:cols=80
-mode con:lines=56
+mode con:cols=80 lines=56
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-::::Configuration - Basic::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::: Configuration - Basic ::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: Declare Global variables
 :: All User variables are set within here.
 :: Defaults
@@ -61,7 +60,7 @@ SET $ARCHIVE_LOG=ADDS_Tool_Session_Archive.log
 SET $ARCHIVE_SEARCH_LOG=ADDS_Tool_Search_Archive.log
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-::::Configuration - Advanced:::::::::::::::::::::::::::::::::::::::::::::::::::
+:::: Configuration - Advanced :::::::::::::::::::::::::::::::::::::::::::::::::
 :: Advanced Settings
 
 :: Suppress_Verbose Output on searches
@@ -93,7 +92,7 @@ SET $DEGUB_MODE=1
 ::	!!!!	Everything below here is 'hard-coded' [DO NOT MODIFY]	!!!!
 ::#############################################################################
 
-::::Default Program Variables::::::::::::::::::::::::::::::::::::::::::::::::::
+:::: Default Program Variables ::::::::::::::::::::::::::::::::::::::::::::::::
 :: Program Variables
 ::	Defaults
 SET $COUNTER_SEARCH=0
@@ -126,7 +125,7 @@ SET "$AD_SERVER_SEARCH=-s %$DC%"
 SET $PREREQUISITE_STATUS=1
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-::::Directory::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::: Directory ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :CD
 	:: Launched from directory
 	SET "$PROGRAM_PATH=%~dp0"
@@ -135,7 +134,7 @@ SET $PREREQUISITE_STATUS=1
 	cd /D "%$LOGPATH%"
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-::::PID::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::: PID ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :PID
 	:: Program information including PID
 	tasklist /FI "WINDOWTITLE eq %$PROGRAM_NAME%*" > "%$LogPath%\var\var_TaskInfo_PID.txt"
@@ -143,7 +142,7 @@ SET $PREREQUISITE_STATUS=1
 	SET /P $PID= < "%$LogPath%\var\var_$PID.txt"
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-::::fISO8601:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::: fISO8601 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :fISO8601
 	:: Function to ensure ISO 8601 Date format yyyy-mmm-dd
 	:: Easiest way to get ISO date
@@ -151,7 +150,7 @@ SET $PREREQUISITE_STATUS=1
 	SET /P $ISO_DATE= < "%$LogPath%\var\var_ISO8601_Date.txt"
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-::::UTC::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::: UTC ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :UTC
 	:: Universal Time Coordinate
 	IF EXIST "%$LogPath%\var\var_$UTC.txt" SET /P $UTC= < "%$LogPath%\var\var_$UTC.txt"
@@ -162,7 +161,7 @@ SET $PREREQUISITE_STATUS=1
 	IF NOT DEFINED $UTC_STANDARD_NAME SET /P $UTC_STANDARD_NAME= < "%$LogPath%\var\var_$UTC_STANDARD_NAME.txt"
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-::::Session Log Header:::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::: Session Log Header :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :wLog
 	:: Start session and write to log
 	Echo Start Session %DATE% %TIME% > "%$LogPath%\%$SESSION_LOG%"
@@ -177,7 +176,7 @@ SET $PREREQUISITE_STATUS=1
 	echo PID: %$PID% >> "%$LogPath%\%$SESSION_LOG%"
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-::::Computer Domain::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::: Computer Domain ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :DUC
 	::	Check for Domain computer
 	::	If value is 1 domain, is 0 workgroup
@@ -210,16 +209,16 @@ SET $PREREQUISITE_STATUS=1
 	echo workgroup else echo domain)
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-::::Administrator Privilege Check::::::::::::::::::::::::::::::::::::::::::::::
+:::: Administrator Privilege Check ::::::::::::::::::::::::::::::::::::::::::::
 :subA
 	openfiles.exe 1> "%$LOGPATH%\var\var_$Admin_Status_M.txt" 2> "%$LOGPATH%\var\var_$Admin_Status_E.txt"
 	SET $ADMIN_STATUS=0
 	FIND "ERROR:" "%$LOGPATH%\var\var_$Admin_Status_E.txt" && (SET $ADMIN_STATUS=1)
 	IF %$ADMIN_STATUS% EQU 0 (SET "$ADMIN_STATUS_N=Yes") ELSE (SET "$ADMIN_STATUS_N=No")
 	echo %$ADMIN_STATUS_N%> "%$LOGPATH%\var\var_$Admin_Status_N.txt"
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-::::Check RSAT-Remote Server Administration Tools::::::::::::::::::::::::::::::
+:::: Check RSAT-Remote Server Administration Tools ::::::::::::::::::::::::::::
 :CheckRSAT
 	dsquery /? 1> nul 2> nul
 	SET $RSAT_STATUS=%ERRORLEVEL%
@@ -253,7 +252,7 @@ Timeout /t 10
 GoTo end
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-::::RSAT Installer:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::: RSAT Installer :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :RSAT
 	:: Requires RSAT-Remote Server Administration Tools
 	::	Active Directory Domain Services (AD DS) tools and Active Directory Lightweight Directory Services (AD LDS) tools
@@ -279,13 +278,13 @@ GoTo end
 	IF %$PREREQUISITE_STATUS% EQU 0 GoTo Start
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-::::Stopwatch - Start::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::: Stopwatch - Start ::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :Start
 :: Capture program load time
 	@PowerShell.exe -c "$span=([TimeSpan]'%Time%' - [TimeSpan]'%$START_LOAD_TIME%'); '{0:00}:{1:00}:{2:00}.{3:00}' -f $span.Hours, $span.Minutes, $span.Seconds, $span.Milliseconds" > "%$LogPath%\var\var_Load_Time.txt"
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-::::Main Menu::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::: Main Menu ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :Menu
 	Color 0F
 	mode con:cols=58 lines=40
@@ -339,7 +338,7 @@ GoTo end
 	Echo.
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-::::Search Menu::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::: Search Menu ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :Search
 	Color 0A
 	mode con:cols=80 lines=52
@@ -375,7 +374,7 @@ GoTo end
 
 ::	##	START SUBROUTINES	##	:::::::::::::::::::::::::::::::::::::::::::::::
 
-::::Search Menu Banner:::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::: Search Menu Banner :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :SMB
 	Color 0A
 	mode con:cols=55 lines=40
@@ -401,7 +400,7 @@ GoTo end
 	GoTo:EOF
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-::::Search Menu Dashboard::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::: Search Menu Dashboard ::::::::::::::::::::::::::::::::::::::::::::::::::::
 :SM
 	cls
 	ECHO ******************************************************
@@ -445,20 +444,20 @@ GoTo end
 :: # Future development
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-::::Start Elapse Time::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::: Start Elapse Time ::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :subSET
 	SET $START_TIME=%TIME%
 	GoTo:EOF
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-::::Total Lapse Time:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::: Total Lapse Time :::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :subTLT
 	@PowerShell.exe -c "$span=([TimeSpan]'%Time%' - [TimeSpan]'%$START_TIME%'); '{0:00}:{1:00}:{2:00}.{3:00}' -f $span.Hours, $span.Minutes, $span.Seconds, $span.Milliseconds" > "%$LogPath%\var\var_Total_Lapsed_Time.txt"
 	SET /P $TOTAL_LAPSE_TIME= < "%$LogPath%\var\var_Total_Lapsed_Time.txt"
 	GoTo:EOF
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-::::Search Log Header::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::: Search Log Header ::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :sHeader
 	IF EXIST "%$LogPath%\%$LAST_SEARCH_LOG%" DEL /Q "%$LogPath%\%$LAST_SEARCH_LOG%"
 	Echo Start search: %DATE% %Time% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -475,7 +474,7 @@ GoTo end
 	GoTo:EOF
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-::::Last Search Log Close - Notepad :::::::::::::::::::::::::::::::::::::::::::
+:::: Last Search Log Close - Notepad ::::::::::::::::::::::::::::::::::::::::::
 :LSLCN
 	taskkill /F /FI "WINDOWTITLE eq %$LAST_SEARCH_LOG% - Notepad" 2>nul 1>nul
 GoTo:EOF
@@ -483,7 +482,7 @@ GoTo:EOF
 
 ::	##	END SUBROUTINES	##	:: ::::::::::::::::::::::::::::::::::::::::::::::::
 
-::::Search Universal:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::: Search Universal :::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :sUniversal
 	:: Search Universal
 	:: 	Reset search variables for HUD
@@ -613,7 +612,7 @@ GoTo:EOF
 	IF %ERRORLEVEL% EQU 1 GoTo sUniversal
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-::::Search User Menu::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::: Search User Menu :::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :sUser
 	::	Close previous Windows
 	call :LSLCN
@@ -642,7 +641,7 @@ GoTo:EOF
 	If ERRORLevel 1 GoTo SUN
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-:::::Search User Name::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::::: Search User Name ::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :SUN
 	:: Reset Variables
 	SET $SEARCH_ATTRIBUTE=name
@@ -764,7 +763,7 @@ GoTo:EOF
 	IF %ERRORLEVEL% EQU 1 GoTo SUN
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-:::::Search User UPN:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::::: Search User UPN :::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :SUU
 	SET $SEARCH_ATTRIBUTE=UPN
 	SET $SEARCH_KEY=
@@ -884,7 +883,7 @@ GoTo:EOF
 	IF %ERRORLEVEL% EQU 1 GoTo SUU
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-:::::Search User first and last name:::::::::::::::::::::::::::::::::::::::::::
+::::: Search User first and last name :::::::::::::::::::::::::::::::::::::::::
 :SUFL
 	SET $SEARCH_TYPE=user
 	SET $SEARCH_ATTRIBUTE=FirstLast-Names
@@ -1294,7 +1293,7 @@ GoTo:EOF
 	IF %ERRORLEVEL% EQU 1 GoTo SUCA
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-:::: Search User Global::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::: Search User Global :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :SUG
 	call :SM
 	echo User global search using:
@@ -1949,7 +1948,7 @@ GoTo:EOF
 	IF %ERRORLEVEL% EQU 1 GoTo sGD
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-:::: Group Search: DisplayName Attribute attribute:::::::::::::::::::::::::::::
+:::: Group Search: DisplayName Attribute attribute ::::::::::::::::::::::::::::
 :sGDN
 	SET $SEARCH_ATTRIBUTE=displayName
 	SET $SEARCH_KEY=
@@ -3437,7 +3436,7 @@ GoTo skipSCMAS
 	IF %ERRORLEVEL% EQU 1 GoTo SCMA
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-:::: Server Search ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::: Search Server ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :sServer
 	
 	SET $SEARCH_TYPE=Server
@@ -3559,105 +3558,132 @@ GoTo skipSSS
 	IF %ERRORLEVEL% EQU 1 GoTo sServer
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-
+:::: Search OU ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :sOU
-	:: Search OU
-	SET "$LAST_SEARCH_TYPE=OrganizationalUnit^(OU^)"
-	call :SM
-	IF NOT DEFINED $SEARCH_KEY (SET $SEARCH_KEY_LAST=NA) ELSE (SET $SEARCH_KEY_LAST=%$SEARCH_KEY%)
+	SET "$SEARCH_TYPE=OrganizationalUnit^(OU^)"
+	SET $SEARCH_ATTRIBUTE=name
 	SET $SEARCH_KEY=
-	::	Close previous Windows
-	taskkill /F /FI "WINDOWTITLE eq %$LAST_SEARCH_LOG% - Notepad" 2> nul 1> nul
-	Echo Use wildcard "*"
-	echo If left blank, will abort.
-	SET /P $SEARCH_KEY=Choose a search key ^(word^):
-	IF NOT DEFINED $SEARCH_KEY GoTo Menu
-	IF /I "%$SEARCH_KEY%"=="NA" GoTo jumpsOU
-	IF "%$SEARCH_KEY%"=="""" GoTo jumpsOU
+	SET $LAST_SEARCH_COUNT=
+	:: Last Search Log Close - Notepad
+	call :LSLCN
 	call :SM
-	echo Selected {%$SEARCH_KEY%} as search key.
-	SET $LAST_SEARCH_KEY=%$SEARCH_KEY%
+	:: Console output
+	@powershell Write-Host "Attribute: name" -ForegroundColor Blue
+	@powershell Write-Host "Can use * wildcard for search." -ForegroundColor Gray
+	@powershell Write-Host "If left blank, will default to * wildcard" -ForegroundColor Magenta
+	@powershell Write-Host "Tpye abort to exit" -ForegroundColor Magenta
+	set $SEARCH_KEY=*
+	SET /P $SEARCH_KEY=%$SEARCH_TYPE% %$SEARCH_ATTRIBUTE% search key:
+	IF /I %$SEARCH_KEY%==abort GoTo Search
+	call :SM
+	@powershell Write-Host "Selected [%$SEARCH_KEY%] as search key." -ForegroundColor Gray
 	@powershell Write-Host "Searching..." -ForegroundColor DarkYellow
+	:: Start Elapse Time
 	call :subSET
-	IF EXIST "%$LogPath%\%$LAST_SEARCH_LOG%" DEL /Q "%$LogPath%\%$LAST_SEARCH_LOG%"
-	Echo Start search %DATE% %Time% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	echo UTC: %$UTC% %$UTC_STANDARD_NAME% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	Echo Search Type: %$LAST_SEARCH_TYPE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	Echo Search Term: %$SEARCH_KEY% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	echo Search AD Root: %$AD_BASE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	echo Search AD Scope: %$AD_SCOPE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	echo Domain Controller: %$DC% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	Echo Domain: %$DOMAIN% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	:: Write log headers
+	call :sHeader
+	:: Check on Wildcard *
+	IF "%$SEARCH_KEY%"=="*" (SET $SERVER_SEARCH_GLOBAL=1) ELSE (SET $SERVER_SEARCH_GLOBAL=0)
+	echo %$SERVER_SEARCH_GLOBAL% > "%$LogPath%\var\var_$SERVER_SEARCH_GLOBAL.txt"
+	:: Credentials
+	:: Domain credentials default to blank
+	SET $DOMAIN_CREDENTIALS=
+	if not "%$SESSION_USER%"=="%$DOMAIN_USER%" SET "$DOMAIN_CREDENTIALS=-u %$DOMAIN_USER% -p %$cUSERPASSWORD%"
 	REM If Forestroot, then searches GC Global Catalog.
+	IF %$SERVER_SEARCH_GLOBAL% EQU 1 SET $AD_BASE=forestroot	
 	set "$AD_SERVER_SEARCH=-s %$DC%.%$DOMAIN%"
 	if %$AD_BASE%==forestroot SET "$AD_SERVER_SEARCH=-gc"
+	:: Debug
+	if %$DEGUB_MODE% EQU 1 CALL :fVarD
+	:: Search Servers
+		:: Check for sorted
+	if %$SORTED% EQU 1 GoTo jumpSOUS
+	:: Unsorted
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=organizationalUnit)(name=%$SEARCH_KEY%))" -attr name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_N_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=organizationalUnit)(name=%$SEARCH_KEY%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_DN.txt"
+	GoTo skipSOUS
+:jumpSOUS
+	:: Sorted
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=organizationalUnit)(name=%$SEARCH_KEY%))" -attr name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_N_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=organizationalUnit)(name=%$SEARCH_KEY%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_DN.txt"
 
-	if %$SORTED% EQU 1 GoTo jumpSOU
-	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
-		DSQUERY OU %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_KEY%" -limit %$sLimit% %$AD_SERVER_SEARCH% > "%$LogPath%\var\var_Last_Search_N.txt") ELSE (
-		DSQUERY OU %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_KEY%" -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% > "%$LogPath%\var\var_Last_Search_N.txt"
-		)
-	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
-		DSQUERY OU %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_KEY%" -limit %$sLimit% %$AD_SERVER_SEARCH% > "%$LogPath%\var\var_Last_Search_DN.txt") ELSE (
-		DSQUERY OU %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_KEY%" -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% > "%$LogPath%\var\var_Last_Search_DN.txt"
-		)
-	if %$SORTED% NEQ 1 GoTo skipSOU
-:jumpSOU
-	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
-		DSQUERY OU %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_KEY%" -limit %$sLimit% %$AD_SERVER_SEARCH% | sort  > "%$LogPath%\var\var_Last_Search_N.txt") ELSE (
-		DSQUERY OU %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_KEY%" -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% | sort > "%$LogPath%\var\var_Last_Search_N.txt"
-		)
-	if "%$SESSION_USER%"=="%$DOMAIN_USER%" (
-		DSQUERY OU %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_KEY%" -limit %$sLimit% %$AD_SERVER_SEARCH% | sort > "%$LogPath%\var\var_Last_Search_DN.txt") ELSE (
-		DSQUERY OU %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_KEY%" -limit %$sLimit% %$AD_SERVER_SEARCH% -u %$DOMAIN_USER% -p %$cUSERPASSWORD% | sort > "%$LogPath%\var\var_Last_Search_DN.txt"
-		)
-:skipSOU
+:skipSOUS
+
+	:: Check results
 	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\var\var_Last_Search_Count.txt"
 	:: remove leading space
 	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\var\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\var\var_Last_Search_Count.txt"
 	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\var\var_Last_Search_Count.txt"
+	call :SM
+	IF %$LAST_SEARCH_COUNT% EQU 0 (
+		echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+		echo End search: %DATE% %Time% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+		TYPE "%$LogPath%\%$LAST_SEARCH_LOG%" >> "%$SEARCH_SESSION_LOG%"
+		@powershell Write-Host "Nothing found! Try again with broader wildcard" -ForegroundColor Red
+		GoTo skipSOU
+	)
+	:: Main output
 	echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Number of search results: %$LAST_SEARCH_COUNT%
-	IF %$LAST_SEARCH_COUNT% EQU 0 (Echo Nothing found! Try again with broader wildcard.)
-	IF %$LAST_SEARCH_COUNT% EQU 0 GoTo skipOUO
-	type "%$LogPath%\var\var_Last_Search_N.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	@powershell Write-Host "Processing..." -ForegroundColor DarkYellow
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	type "%$LogPath%\var\var_Last_Search_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	:: Munge N_DN file
+	IF EXIST "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I "distinguishedName" "%$LogPath%\var\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
+	type "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_N_DN.txt"
+	type "%$LogPath%\var\var_Last_Search_N_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"	
+	:: Munge DN file
+	IF EXIST "%$LogPath%\var\var_Last_Search_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_DN_munge.txt"
+	type "%$LogPath%\var\var_Last_Search_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_DN.txt"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	IF %$SUPPRESS_VERBOSE% EQU 1 GoTo jumpSOUO
+	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Verbose Output: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	:: Detailed Output
+	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
+	call :SM
+	@powershell Write-Host "Processing verbose..." -ForegroundColor DarkYellow
+	@powershell Write-Host '%%N' -ForegroundColor DarkGray
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%~N)" -attr name description %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo %$SEARCH_TYPE% DN: %%N >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"	
+	echo Details: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * -filter "(distinguishedName=%%~N)" -attr * %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	)
+	
+:jumpSOUO
+	:: Search counter increment
+	Call :fSC
+	:: Total Lapse TIme
 	call :subTLT
+	:: Refresh HUD
+	call :SM
 	echo Total Search Time: %$TOTAL_LAPSE_TIME%
 	echo Total Search Time: %$TOTAL_LAPSE_TIME% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo End search: %DATE% %Time% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	IF %$LAST_SEARCH_COUNT% EQU 0 (Echo Nothing found! Try again with broader wildcard.) & (echo.) & (timeout /t 10)
-	IF %$LAST_SEARCH_COUNT% EQU 0 GoTo sOU
-	:: Search counter increment
-	Call :fSC
+	type "%$LogPath%\%$LAST_SEARCH_LOG%" >> "%$LogPath%\%$SEARCH_SESSION_LOG%"
 	:: Open log files
 	@explorer "%$LogPath%\%$LAST_SEARCH_LOG%"
-	IF %$LAST_SEARCH_COUNT% EQU 1 (SET $OU_USE_OPT=Y) ELSE (SET $OU_USE_OPT=N)
-	IF /I "%$OU_USE_OPT%"=="Y" (Echo Single OU found!) ELSE (GoTo skipOUO)
-	echo Set the OU as search base?
-	Choice /c yn /m "[y]es or [n]o":
-	IF %ERRORLEVEL% EQU 2 GoTo skipOUO
-	IF %ERRORLEVEL% EQU 1 for /F "skip=1 delims=" %%S IN ('FIND /I "=" "%$LogPath%\%$LAST_SEARCH_LOG%"') DO ECHO %%S> "%$LogPath%\var\var_OU_Base.txt"
-	SET /P $AD_BASE= < "%$LogPath%\var\var_OU_Base.txt"
-	echo AD Base: %$AD_BASE%
-:skipOUO
+	
+:skipSOU
 	echo Search Again?
 	Choice /c yn /m "[y]es or [n]o":
-	IF %ERRORLEVEL% EQU 2 GoTo Menu
-	IF %ERRORLEVEL% EQU 1 GoTo sOU
+	IF %ERRORLEVEL% EQU 2 GoTo Search
+	IF %ERRORLEVEL% EQU 1 GoTo SOU
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-
-
-
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:://///////////////////////////////////////////////////////////////////////////
+:::: User Settings ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :Uset
-	::	User Settings
+	
 	Color 8E
 	mode con:cols=60 lines=40
 	cls
@@ -3708,10 +3734,11 @@ GoTo skipSSS
 	If ERRORLevel 3 GoTo uSetADS
 	If ERRORLevel 2 GoTo uSetDC
 	If ERRORLevel 1 GoTo uSetL
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+:::: Log Settings :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :UsetL
-	::	Log Settings
+	
 	mode con:cols=60 lines=40
 	cls
 	ECHO ************************************************************
@@ -4143,8 +4170,8 @@ SET "$DC_TAG=DS Settings"
 	GoTo:EOF
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+:::: Subroutine for search operators ::::::::::::::::::::::::::::::::::::::::::
 :subOperator
-	:: Subroutine for search operators
 	SET $SEARCH_ATTR_%~1=%~1
 	@powershell Write-Host "%~1 search operator:" -ForegroundColor Gray
 	echo [1] Equal [=]
@@ -4160,37 +4187,27 @@ SET "$DC_TAG=DS Settings"
 GoTo:EOF
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+:::: Function Variable Debug ::::::::::::::::::::::::::::::::::::::::::::::::::
 :fVarD
-	:: Function Variable Debug
+	
 	set | FINDSTR /B /C:"$" > "%$LOGPATH%\var\Variable_Debug_%$PID%.txt"
 GoTo:EOF
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 
-
-
-
-
-
-
-
-
-
 ::	jump error section
 GoTo end
 
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-::
+::!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+::#############################################################################
 :: ERROR SECTION
-::
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::#############################################################################
 
+:::: Banner :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :ErrBann
-:: Banner
 	cls
 	color 4E
-	mode con:cols=80
-	mode con:lines=40
+	mode con:cols=80 lines=40
 	ECHO   ***************************************************************************
 	ECHO.
 	ECHO		%$PROGRAM_NAME% %$VERSION%
@@ -4208,8 +4225,8 @@ GoTo end
 	GoTo:EOF
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+:::: error Administrative Privilege :::::::::::::::::::::::::::::::::::::::::::
 :err10
-	:: error Administrative Privilege
 	call :ErrBann
 	echo Administrative Privilege Error
 	Echo.
@@ -4226,8 +4243,9 @@ GoTo end
 	GoTo end
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+:::: error RSAT :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :err20
-	::error RSAT
+
 	call :ErrBann
 	echo RSAT-Remote Server Administration Tools ERROR
 	echo.
@@ -4241,8 +4259,8 @@ GoTo end
 	GoTo end
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+:::: Error PW Cache :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :err30
-	:: Error PW Cache
 	::
 	call :ErrBann
 	echo Logged in User is not a domain user, and no PW cached!
@@ -4254,8 +4272,8 @@ GoTo end
 	GoTo subDA
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+:::: Error Under Development ::::::::::::::::::::::::::::::::::::::::::::::::::
 :err40
-	:: Error Under Development
 	call :ErrBann
 	echo	UNDER CONSTRUCTION
 	echo.
@@ -4264,9 +4282,11 @@ GoTo end
 	timeout /t 60
 GoTo Search
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+
+:::: End session ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :end
-	:: End session
 	IF EXIST "%$LOGPATH%\%$SESSION_LOG%" Echo End Session %DATE% %TIME%. >> "%$LOGPATH%\%$SESSION_LOG%"
 	IF EXIST "%$LOGPATH%\%$SESSION_LOG%" Echo. >> "%$LOGPATH%\%$SESSION_LOG%"
 	IF EXIST "%$LogPath%\var\var_$PID.txt" del /q "%$LogPath%\var\var_$PID.txt"
@@ -4301,8 +4321,8 @@ GoTo Search
 :skipLC
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+:::: Credits ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :credits
-	::	Credits
 	cls
 	mode con:cols=55 lines=25
 	COLOR 0B

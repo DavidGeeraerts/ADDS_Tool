@@ -19,6 +19,14 @@
 
 ---
 
+## Version 0.12.0 Build: 2021-02-08
+#### Changed
+- Search by OU updated with template
+- Formatting to be more consistent
+
+---
+
+
 ## Version 0.11.0 Build: 2021-02-05
 #### Changed
 - Search by Computer Advanced updated with template
@@ -35,8 +43,6 @@
 
 #### Removed
 - trailing spaces
-
----
 
 
 ## Version 0.10.0 Build: 2021-01-29
