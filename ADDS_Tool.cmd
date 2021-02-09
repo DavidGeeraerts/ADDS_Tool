@@ -39,8 +39,8 @@
 @Echo Off
 @SETLOCAL enableextensions
 SET $PROGRAM_NAME=Active_Directory_Domain_Services_Tool
-SET $Version=0.12.0
-SET $BUILD=2021-02-08 08:00
+SET $Version=0.13.0
+SET $BUILD=2021-02-09 09:15
 Title %$PROGRAM_NAME%
 Prompt ADT$G
 color 8F
@@ -206,14 +206,13 @@ SET $PREREQUISITE_STATUS=1
 	:: Friendly name
 	if %$DOMAIN_PC% EQU 0 SET $DOMAIN_PC_N=workgroup
 	if %$DOMAIN_PC% EQU 1 SET $DOMAIN_PC_N=domain
-	echo workgroup else echo domain)
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :::: Administrator Privilege Check ::::::::::::::::::::::::::::::::::::::::::::
 :subA
 	openfiles.exe 1> "%$LOGPATH%\var\var_$Admin_Status_M.txt" 2> "%$LOGPATH%\var\var_$Admin_Status_E.txt"
 	SET $ADMIN_STATUS=0
-	FIND "ERROR:" "%$LOGPATH%\var\var_$Admin_Status_E.txt" && (SET $ADMIN_STATUS=1)
+	FIND "ERROR:" "%$LOGPATH%\var\var_$Admin_Status_E.txt" 2> nul > nul  && (SET $ADMIN_STATUS=1)
 	IF %$ADMIN_STATUS% EQU 0 (SET "$ADMIN_STATUS_N=Yes") ELSE (SET "$ADMIN_STATUS_N=No")
 	echo %$ADMIN_STATUS_N%> "%$LOGPATH%\var\var_$Admin_Status_N.txt"
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -282,6 +281,28 @@ GoTo end
 :Start
 :: Capture program load time
 	@PowerShell.exe -c "$span=([TimeSpan]'%Time%' - [TimeSpan]'%$START_LOAD_TIME%'); '{0:00}:{1:00}:{2:00}.{3:00}' -f $span.Hours, $span.Minutes, $span.Seconds, $span.Milliseconds" > "%$LogPath%\var\var_Load_Time.txt"
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+:::: Parameters :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:Param
+	:: Parameter #1 Search Type
+	SET $PARAMETER1=%~1
+	IF NOT DEFINED $PARAMETER1 GoTo skipParam
+	set $SEARCH_TYPE=%$PARAMETER1%
+	echo %$SEARCH_TYPE%> "%$LOGPATH%\var\var_$SEARCH_TYPE.txt"
+	:: Parameter #2 Attribute
+	SET $PARAMETER2=%~2
+	IF NOT DEFINED $PARAMETER2 GoTo skipParam
+	set $SEARCH_ATTRIBUTE=%$PARAMETER2%
+	echo %$SEARCH_ATTRIBUTE%> "%$LOGPATH%\var\var_$SEARCH_ATTRIBUTE.txt"
+	:: Parameter #3 Search Key
+	SET $PARAMETER3=%~3
+	IF NOT DEFINED $PARAMETER3 GoTo skipParam
+	set $SEARCH_KEY=%$PARAMETER3%
+	echo %$SEARCH_KEY%> "%$LOGPATH%\var\var_$SEARCH_KEY.txt"
+	:: Automated Search
+	GoTo SAUTO
+:skipParam
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :::: Main Menu ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -4164,6 +4185,7 @@ SET "$DC_TAG=DS Settings"
 
 :::: FUNCTIONS ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+:::: Search Counter :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :fSC
 	::	Search Counter
 	SET /A $COUNTER_SEARCH+=1
@@ -4194,8 +4216,102 @@ GoTo:EOF
 GoTo:EOF
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+:::: Search Automatic :::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:SAUTO
+	:: Parse parameter 1
+	IF /I %$SEARCH_TYPE%==OU set $SEARCH_TYPE=OrganizationalUnit
+	:: Create filter
+	SET "$FILTER=(objectClass=%$SEARCH_TYPE%)(%$SEARCH_ATTRIBUTE%=%$SEARCH_KEY%)"
+::	SET "$FILTER_N=^(objectClass^=%$SEARCH_TYPE%^)^(%$SEARCH_ATTRIBUT%^=%$SEARCH_KEY%^)"
+	SET "$FILTER=(&%$FILTER%)"
+::	SET "$FILTER_N=^(^&%$FILTER%^)"
+::	echo %$FILTER%> "%$LogPath%\var\var_$FILTER.txt"
+	:: Start Elapse Time
+	call :subSET
+	:: Write log headers
+	call :sHeader
+	:: Credentials
+	:: Domain credentials default to blank
+	SET $DOMAIN_CREDENTIALS=
+	if not "%$SESSION_USER%"=="%$DOMAIN_USER%" SET "$DOMAIN_CREDENTIALS=-u %$DOMAIN_USER% -p %$cUSERPASSWORD%"
+	REM If Forestroot, then searches GC Global Catalog.
+	set "$AD_SERVER_SEARCH=-s %$DC%.%$DOMAIN%"
+	if %$AD_BASE%==forestroot SET "$AD_SERVER_SEARCH=-gc"
+	:: Debug
+	if %$DEGUB_MODE% EQU 1 CALL :fVarD
+	:: Search
+		:: Check for sorted
+	if %$SORTED% EQU 1 GoTo jumpSAUTOS
+	:: Unsorted
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "%$FILTER%" -attr name distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_N_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "%$FILTER%" -attr distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_DN.txt"	
+	GoTo skipSAUTOS
+:jumpSAUTOS
+	:: Sorted
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "%$FILTER%" -attr name distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_N_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "%$FILTER%" -attr distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_DN.txt"	
+:skipSAUTOS
+	:: Check results
+	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\var\var_Last_Search_Count.txt"
+	:: remove leading space
+	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\var\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\var\var_Last_Search_Count.txt"
+	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\var\var_Last_Search_Count.txt"
+	IF %$LAST_SEARCH_COUNT% EQU 0 (
+		echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+		echo End search: %DATE% %Time% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+		TYPE "%$LogPath%\%$LAST_SEARCH_LOG%" >> "%$SEARCH_SESSION_LOG%"
+		GoTo skipSAUTO
+		)
+	:: Main output
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	:: Munge DN file
+	IF EXIST "%$LogPath%\var\var_Last_Search_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_DN_munge.txt"
+	type "%$LogPath%\var\var_Last_Search_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_DN.txt"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	:: Munge N_DN file
+	IF EXIST "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I "distinguishedName" "%$LogPath%\var\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
+	type "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_N_DN.txt"
+	type "%$LogPath%\var\var_Last_Search_N_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	IF %$SUPPRESS_VERBOSE% EQU 1 GoTo jumpSAUTOO
+	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Verbose Output: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	:: Detailed Output
+	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%~N)" -attr name %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo %$SEARCH_TYPE% DN: %%N >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo Details: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * -filter "(distinguishedName=%%~N)" -attr * %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	)
 
-::	jump error section
+:jumpSAUTOO
+	:: Search counter increment
+	Call :fSC
+	:: Total Lapse TIme
+	call :subTLT
+	echo Total Search Time: %$TOTAL_LAPSE_TIME% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo End search: %DATE% %Time% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	type "%$LogPath%\%$LAST_SEARCH_LOG%" >> "%$LogPath%\%$SEARCH_SESSION_LOG%"
+
+:skipSAUTO
+	GoTo end
+
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+
+
+:::: jump error section :::::::::::::::::::::::::::::::::::::::::::::::::::::::
 GoTo end
 
 ::!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -4323,6 +4439,8 @@ GoTo Search
 
 :::: Credits ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :credits
+	:: Exit if run as auto
+	if defined $PARAMETER1 exit /B
 	cls
 	mode con:cols=55 lines=25
 	COLOR 0B

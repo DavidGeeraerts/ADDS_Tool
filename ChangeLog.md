@@ -19,12 +19,22 @@
 
 ---
 
+## Version 0.13.0 Build: 2021-02-09
+#### Added
+- Auto search via passing parameters
+
+#### Changed
+- ReadMe file
+
+#### Fixed
+- Admin check output
+
+---
+
 ## Version 0.12.0 Build: 2021-02-08
 #### Changed
 - Search by OU updated with template
 - Formatting to be more consistent
-
----
 
 
 ## Version 0.11.0 Build: 2021-02-05

@@ -80,6 +80,38 @@ Default for logging is pathed to: `%APPDATA%\ADDS`
 `ADDS_Tool_Search_Archive.log` --archive log for all searches
 
 
+
+
+## Parameters
+
+Tool can be run in auto mode with the following parameters:
+
+`Parameter1 $SEARCH_TYPE`
+	
+	- user
+	- group
+	- computer
+	- server
+	- ou
+
+`Parameter2 $SEARCH_ATTRIBUTE`
+
+	- any valide attribute for the given object
+
+`Parameter3 $SEARCH_KEY`
+
+	- any valide search key, such as "*" wildcard
+
+***e.g.*** `ADDS_Tool.cmd "Parameter1" "Parameter2" "Parameter3"`
+
+Logs will need to be opened manually
+
+
+## Configuration
+
+
+
+
 ## Dependencies
 
 ADDS_Tool requires (RSAT) [Remote Server Administrative Tools](https://docs.microsoft.com/en-us/troubleshoot/windows-server/system-management-components/remote-server-administration-tools). 
@@ -87,10 +119,6 @@ The program will ask to install if not detected, using [DISM](https://docs.micro
 Must be runnig with administartive privilege in order to install RSAT. 
 
 [PowerShell](https://docs.microsoft.com/en-us/powershell/scripting/overview): Leveraged for some functions.
-
-
-## Configuration
-
 
 
 ## License
