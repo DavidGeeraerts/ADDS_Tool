@@ -109,6 +109,7 @@ Logs will need to be opened manually
 
 ## Configuration
 
+The config file needs to be in the same directory as the tool cmd.
 
 
 

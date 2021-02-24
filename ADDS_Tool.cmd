@@ -39,12 +39,16 @@
 @Echo Off
 @SETLOCAL enableextensions
 SET $PROGRAM_NAME=Active_Directory_Domain_Services_Tool
-SET $Version=0.13.0
-SET $BUILD=2021-02-09 09:15
+SET $Version=0.14.0
+SET $BUILD=2021-02-24 10:30
 Title %$PROGRAM_NAME%
 Prompt ADT$G
 color 8F
 mode con:cols=80 lines=56
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+::: Configuration File ::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+SET $CONFIG_FILE=ADDS_Tool.config
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :::: Configuration - Basic ::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -85,7 +89,7 @@ SET $LOAD_SETTINGS=Yes
 
 :: DEBUG
 :: {0 [Off/No] , 1 [On/Yes]}
-SET $DEGUB_MODE=1
+SET $DEGUB_MODE=0
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 ::#############################################################################
@@ -104,7 +108,7 @@ SET $DC=%USERDOMAIN%
 SET $SESSION_USER=%USERNAME%
 SET $DOMAIN_USER=NA
 SET $cUSERNAME=
-SET $adgroup.n=NA
+SET $ADGROUP.N=NA
 SET $SEARCH_TYPE=NA
 SET $SEARCH_KEY=NA
 SET $LAST_SEARCH_COUNT=NA
@@ -124,6 +128,47 @@ SET "$AD_SERVER_SEARCH=-s %$DC%"
 ::	assumes ready to go
 SET $PREREQUISITE_STATUS=1
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+::###########################################################################::
+:: CONFIGURATION FILE OVERRIDE
+::###########################################################################::
+
+IF NOT EXIST "%~dp0\%$CONFIG_FILE%" Goto skipCF
+
+:: FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"<$VARIABLE>" "%~dp0\%$CONFIG_FILE%"') DO SET "<$VARIABLE>=%%V"
+
+::   ADDS_TOOL_CONFIG_SCHEMA_VERSION
+FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$CONFIG_SCHEMA_VERSION" "%~dp0\%$CONFIG_FILE%"') DO SET "$CONFIG_SCHEMA_VERSION=%%V"
+::	Logging
+FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$LOGPATH" "%~dp0\%$CONFIG_FILE%"') DO SET "$LOGPATH=%%V"
+FOR /F %%R IN ('ECHO %$LOGPATH%') DO SET $LOGPATH=%%R
+FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$SESSION_LOG" "%~dp0\%$CONFIG_FILE%"') DO SET "$SESSION_LOG=%%V"
+FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$SEARCH_SESSION_LOG" "%~dp0\%$CONFIG_FILE%"') DO SET "$SEARCH_SESSION_LOG=%%V"
+FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$LAST_SEARCH_LOG" "%~dp0\%$CONFIG_FILE%"') DO SET "$LAST_SEARCH_LOG=%%V"
+FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$ARCHIVE_LOG" "%~dp0\%$CONFIG_FILE%"') DO SET "$ARCHIVE_LOG=%%V"
+FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$ARCHIVE_SEARCH_LOG" "%~dp0\%$CONFIG_FILE%"') DO SET "$ARCHIVE_SEARCH_LOG=%%V"
+:: Search Defaults
+FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$sLimit" "%~dp0\%$CONFIG_FILE%"') DO SET $sLimit=%%V"
+FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$AD_BASE" "%~dp0\%$CONFIG_FILE%"') DO SET "$AD_BASE=%%V"
+FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$AD_SCOPE" "%~dp0\%$CONFIG_FILE%"') DO SET "$AD_SCOPE=%%V"
+
+::	Credentials
+FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$DOMAIN_USER" "%~dp0\%$CONFIG_FILE%"') DO SET "$DOMAIN_USER=%%V"
+FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$DOMAIN_USER_PASSWORD" "%~dp0\%$CONFIG_FILE%"') DO SET "$DOMAIN_USER_PASSWORD=%%V"
+REM Friendly name to variable name
+IF DEFINED $DOMAIN_USER_PASSWORD SET $cUSERPASSWORD=%$DOMAIN_USER_PASSWORD%
+
+:: Advanced Settings
+FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$DEGUB_MODE" "%~dp0\%$CONFIG_FILE%"') DO SET "$DEGUB_MODE=%%V"
+FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$SUPPRESS_VERBOSE" "%~dp0\%$CONFIG_FILE%"') DO SET "$SUPPRESS_VERBOSE=%%V"
+FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$SORTED" "%~dp0\%$CONFIG_FILE%"') DO SET "$SORTED=%%V"
+FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$KPLOG" "%~dp0\%$CONFIG_FILE%"') DO SET "$KPLOG=%%V"
+REM variable name to Friendly name
+IF %$SORTED% EQU 1 (SET $SORTED_N=Yes) ELSE (SET $SORTED_N=No)
+IF %$SUPPRESS_VERBOSE% EQU 0 (SET $SUPPRESS_VERBOSE_N=No) ELSE (SET $SUPPRESS_VERBOSE_N=Yes)
+
+:skipCF
+
 
 :::: Directory ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :CD
@@ -169,6 +214,7 @@ SET $PREREQUISITE_STATUS=1
 	Echo Program Name: %$PROGRAM_NAME% >> "%$LogPath%\%$SESSION_LOG%"
 	Echo Program Version: %$Version% >> "%$LogPath%\%$SESSION_LOG%"
 	Echo Program Build: %$BUILD% >> "%$LogPath%\%$SESSION_LOG%"
+	IF DEFINED $CONFIG_SCHEMA_VERSION echo Program config schema: %$CONFIG_SCHEMA_VERSION% >> "%$LogPath%\%$SESSION_LOG%"
 	echo Program Path: %$PROGRAM_PATH% >> "%$LogPath%\%$SESSION_LOG%"
 	Echo PC: %COMPUTERNAME% >> "%$LogPath%\%$SESSION_LOG%"
 	echo PC Domain: %USERDOMAIN% >> "%$LogPath%\%$SESSION_LOG%"

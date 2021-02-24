@@ -19,6 +19,12 @@
 
 ---
 
+## Version 0.14.0 Build: 2021-02-24
+#### Added
+- Configuration file
+
+---
+
 ## Version 0.13.0 Build: 2021-02-09
 #### Added
 - Auto search via passing parameters
@@ -29,7 +35,6 @@
 #### Fixed
 - Admin check output
 
----
 
 ## Version 0.12.0 Build: 2021-02-08
 #### Changed
