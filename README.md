@@ -5,7 +5,6 @@
 <h2 align="center"> :bangbang:  :construction:  :bangbang: UNDER DEVELOPMENT :bangbang:  :construction:  :bangbang: </h2> <br>
 
 
-*Weekly build release*
 
 
 ## Table of Contents

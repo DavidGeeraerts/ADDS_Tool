@@ -19,11 +19,20 @@
 
 ---
 
+## Version 0.15.0 Build: 2021-04-09
+#### Added
+- Custom OU subroutine
+
+#### Fixed
+- Config file parsing and assignment
+- Define custom ou as AD Base
+
+---
+
 ## Version 0.14.0 Build: 2021-02-24
 #### Added
 - Configuration file
 
----
 
 ## Version 0.13.0 Build: 2021-02-09
 #### Added

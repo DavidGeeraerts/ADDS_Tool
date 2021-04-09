@@ -39,8 +39,8 @@
 @Echo Off
 @SETLOCAL enableextensions
 SET $PROGRAM_NAME=Active_Directory_Domain_Services_Tool
-SET $Version=0.14.0
-SET $BUILD=2021-02-24 10:30
+SET $Version=0.15.0
+SET $BUILD=2021-04-09 10:00
 Title %$PROGRAM_NAME%
 Prompt ADT$G
 color 8F
@@ -140,17 +140,32 @@ IF NOT EXIST "%~dp0\%$CONFIG_FILE%" Goto skipCF
 ::   ADDS_TOOL_CONFIG_SCHEMA_VERSION
 FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$CONFIG_SCHEMA_VERSION" "%~dp0\%$CONFIG_FILE%"') DO SET "$CONFIG_SCHEMA_VERSION=%%V"
 ::	Logging
-FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$LOGPATH" "%~dp0\%$CONFIG_FILE%"') DO SET "$LOGPATH=%%V"
+FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$LOGPATH" "%~dp0\%$CONFIG_FILE%"') DO SET "$CONFIG_LOGPATH=%%V"
+IF DEFINED $CONFIG_LOGPATH SET "$LOGPATH=%$CONFIG_LOGPATH%"
 FOR /F %%R IN ('ECHO %$LOGPATH%') DO SET $LOGPATH=%%R
-FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$SESSION_LOG" "%~dp0\%$CONFIG_FILE%"') DO SET "$SESSION_LOG=%%V"
-FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$SEARCH_SESSION_LOG" "%~dp0\%$CONFIG_FILE%"') DO SET "$SEARCH_SESSION_LOG=%%V"
-FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$LAST_SEARCH_LOG" "%~dp0\%$CONFIG_FILE%"') DO SET "$LAST_SEARCH_LOG=%%V"
-FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$ARCHIVE_LOG" "%~dp0\%$CONFIG_FILE%"') DO SET "$ARCHIVE_LOG=%%V"
-FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$ARCHIVE_SEARCH_LOG" "%~dp0\%$CONFIG_FILE%"') DO SET "$ARCHIVE_SEARCH_LOG=%%V"
+::	Session log
+FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$SESSION_LOG" "%~dp0\%$CONFIG_FILE%"') DO SET "$CONFIG_SESSION_LOG=%%V"
+IF DEFINED $CONFIG_SESSION_LOG SET "$SESSION_LOG=%$CONFIG_SESSION_LOG%"
+::	Session Search log
+FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$SEARCH_SESSION_LOG" "%~dp0\%$CONFIG_FILE%"') DO SET "$CONFIG_SEARCH_SESSION_LOG=%%V"
+IF DEFINED $CONFIG_SEARCH_SESSION_LOG SET "$SEARCH_SESSION_LOG=%$CONFIG_SEARCH_SESSION_LOG%"
+::	Last search log
+FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$LAST_SEARCH_LOG" "%~dp0\%$CONFIG_FILE%"') DO SET "$CONFIG_LAST_SEARCH_LOG=%%V"
+IF DEFINED $CONFIG_LAST_SEARCH_LOG SET "$LAST_SEARCH_LOG=%$CONFIG_LAST_SEARCH_LOG%"
+::	Archive Session log
+FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$ARCHIVE_LOG" "%~dp0\%$CONFIG_FILE%"') DO SET "$CONFIG_ARCHIVE_LOG=%%V"
+IF DEFINED $CONFIG_ARCHIVE_LOG SET "$ARCHIVE_LOG=%$CONFIG_ARCHIVE_LOG%"
+::	Archive Search log
+FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$ARCHIVE_SEARCH_LOG" "%~dp0\%$CONFIG_FILE%"') DO SET "$CONFIG_ARCHIVE_SEARCH_LOG=%%V"
+IF DEFINED $CONFIG_ARCHIVE_SEARCH_LOG SET "$ARCHIVE_SEARCH_LOG=%$CONFIG_ARCHIVE_SEARCH_LOG%"
+
 :: Search Defaults
-FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$sLimit" "%~dp0\%$CONFIG_FILE%"') DO SET $sLimit=%%V"
-FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$AD_BASE" "%~dp0\%$CONFIG_FILE%"') DO SET "$AD_BASE=%%V"
-FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$AD_SCOPE" "%~dp0\%$CONFIG_FILE%"') DO SET "$AD_SCOPE=%%V"
+FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$sLimit" "%~dp0\%$CONFIG_FILE%"') DO SET "$CONFIG_sLimit=%%V"
+IF DEFINED $CONFIG_sLimit SET "$sLimit=%$CONFIG_sLimit%"
+FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$AD_BASE" "%~dp0\%$CONFIG_FILE%"') DO SET "$CONFIG_AD_BASE=%%V"
+IF DEFINED $CONFIG_AD_BASE SET "$AD_BASE=%$CONFIG_AD_BASE%"
+FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$AD_SCOPE" "%~dp0\%$CONFIG_FILE%"') DO SET "$CONFIG_AD_SCOPE=%%V"
+IF DEFINED $CONFIG_AD_SCOPE SET "$AD_SCOPE=%$CONFIG_AD_SCOPE%"
 
 ::	Credentials
 FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$DOMAIN_USER" "%~dp0\%$CONFIG_FILE%"') DO SET "$DOMAIN_USER=%%V"
@@ -159,10 +174,15 @@ REM Friendly name to variable name
 IF DEFINED $DOMAIN_USER_PASSWORD SET $cUSERPASSWORD=%$DOMAIN_USER_PASSWORD%
 
 :: Advanced Settings
-FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$DEGUB_MODE" "%~dp0\%$CONFIG_FILE%"') DO SET "$DEGUB_MODE=%%V"
-FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$SUPPRESS_VERBOSE" "%~dp0\%$CONFIG_FILE%"') DO SET "$SUPPRESS_VERBOSE=%%V"
-FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$SORTED" "%~dp0\%$CONFIG_FILE%"') DO SET "$SORTED=%%V"
-FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$KPLOG" "%~dp0\%$CONFIG_FILE%"') DO SET "$KPLOG=%%V"
+FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$DEGUB_MODE" "%~dp0\%$CONFIG_FILE%"') DO SET "$CONFIG_DEGUB_MODE=%%V"
+IF DEFINED $CONFIG_DEGUB_MODE SET "$DEGUB_MODE=%$CONFIG_DEGUB_MODE%"
+FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$SUPPRESS_VERBOSE" "%~dp0\%$CONFIG_FILE%"') DO SET "$CONFIG_SUPPRESS_VERBOSE=%%V"
+IF DEFINED $CONFIG_SUPPRESS_VERBOSE SET "$SUPPRESS_VERBOSE=%$CONFIG_SUPPRESS_VERBOSE%"
+FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$SORTED" "%~dp0\%$CONFIG_FILE%"') DO SET "$CONFIG_SORTED=%%V"
+IF DEFINED $CONFIG_SORTED SET "$SORTED=%$CONFIG_SORTED%"
+FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$KPLOG" "%~dp0\%$CONFIG_FILE%"') DO SET "$CONFIG_KPLOG=%%V"
+IF DEFINED $CONFIG_KPLOG SET "$KPLOG=%$CONFIG_KPLOG%"
+
 REM variable name to Friendly name
 IF %$SORTED% EQU 1 (SET $SORTED_N=Yes) ELSE (SET $SORTED_N=No)
 IF %$SUPPRESS_VERBOSE% EQU 0 (SET $SUPPRESS_VERBOSE_N=No) ELSE (SET $SUPPRESS_VERBOSE_N=Yes)
@@ -3741,11 +3761,17 @@ GoTo skipSSS
 	@explorer "%$LogPath%\%$LAST_SEARCH_LOG%"
 	
 :skipSOU
-	echo Search Again?
-	Choice /c yn /m "[y]es or [n]o":
-	IF %ERRORLEVEL% EQU 2 GoTo Search
-	IF %ERRORLEVEL% EQU 1 GoTo SOU
+	echo What to do next?
+	echo	[1] Set OU as AD Base search?
+	echo	[2] Search OU again?
+	echo	[3] Go back to search menu?
+	echo.
+	Choice /c 123 /m "Select:"
+	IF %ERRORLEVEL% EQU 3 GoTo Search
+	IF %ERRORLEVEL% EQU 2 GoTo SOU
+	IF %ERRORLEVEL% EQU 1 GoTo subADB
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
 
 :://///////////////////////////////////////////////////////////////////////////
 :::: User Settings ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -4162,13 +4188,50 @@ SET "$DC_TAG=DS Settings"
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :subADB
-	:: Subroutine to set AD Base with OU
-	IF NOT EXIST "%$LOGPATH%\var\var_OU_Base.txt" GoTo skipADB
+:: Search AD Settings
+	mode con:cols=60 lines=40
+	cls
+	ECHO ************************************************************
+	ECHO		%$PROGRAM_NAME% %$VERSION%
+	echo.
+	echo		 	%DATE% %TIME%
+	echo.
+	Echo		Location: AD Search Settings
+	echo.
+	ECHO ************************************************************
+	Echo.
+	Echo Current AD Search Settings
+	Echo ------------------------
+	Echo  AD Base: %$AD_BASE%
+	Echo  AD Scope: %$AD_SCOPE%
+	Echo ------------------------
+	echo.
+	echo Change AD Base to OU:
+	echo format: OU=OU,DC=domain,DC=domainRoot
+	SET /P $OU_Base=
+	echo "%$OU_Base%">"%$LOGPATH%\var\var_OU_Base.txt"
+	echo Checking OU...
+	DSQUERY OU "%$OU_Base%" 2> nul
+	SET $OU_BASE_ERROR=%ERRORLEVEL%
+	IF %$OU_BASE_ERROR% NEQ 0 (
+		SET $OU_Base=
+		echo Not a valid OU!
+		GoTo skipADB
+		)
 	SET /P $AD_BASE= < "%$LOGPATH%\var\var_OU_Base.txt"
 :skipADB
-	IF NOT DEFINED $AD_BASE GoTo uSetADS
-	IF NOT EXIST "%$LOGPATH%\var\var_OU_Base.txt" GoTo uSetADS
-	GoTo subADbase
+	IF DEFINED $OU_Base GoTo skipOUB
+	Echo Try again to set OU?
+	Choice /c yn /m "[y]es or [n]o":
+	IF %ERRORLEVEL% EQU 2 GoTo skipOUB
+	IF %ERRORLEVEL% EQU 1 GoTo subADB
+:skipOUB
+	echo AD_BASE changed to: %$OU_Base%
+	echo.
+	timeout /t 20
+	GoTo Uset
+	
+	
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :uSetSP
