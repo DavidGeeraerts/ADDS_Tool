@@ -39,8 +39,8 @@
 @Echo Off
 @SETLOCAL enableextensions
 SET $PROGRAM_NAME=Active_Directory_Domain_Services_Tool
-SET $Version=0.15.0
-SET $BUILD=2021-04-09 10:00
+SET $Version=0.16.0
+SET $BUILD=2021-07-05 08:30
 Title %$PROGRAM_NAME%
 Prompt ADT$G
 color 8F
@@ -515,11 +515,11 @@ GoTo end
 	echo.
 	echo Search HUD
 	Echo ------------------------
+	Echo  Search count: %$COUNTER_SEARCH%
 	Echo  Search Type: %$SEARCH_TYPE%
 	echo  Search Attribute: %$SEARCH_ATTRIBUTE%
 	echo  Search Key: %$SEARCH_KEY%
 	echo  Search Results: %$LAST_SEARCH_COUNT%
-	Echo  Search count: %$COUNTER_SEARCH%
 	Echo ******************************************************
 	echo.
 	GoTo:EOF

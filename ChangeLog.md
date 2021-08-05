@@ -19,6 +19,13 @@
 
 ---
 
+## Version 0.16.0 Build: 2021-07-05
+### Changed
+- Search Count moved to top of Search HUD.
+
+---
+
+
 ## Version 0.15.0 Build: 2021-04-09
 #### Added
 - Custom OU subroutine
@@ -27,7 +34,6 @@
 - Config file parsing and assignment
 - Define custom ou as AD Base
 
----
 
 ## Version 0.14.0 Build: 2021-02-24
 #### Added
