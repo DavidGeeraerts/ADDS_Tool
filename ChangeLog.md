@@ -19,12 +19,16 @@
 
 ---
 
-## Version 0.16.0 Build: 2021-07-05
-### Changed
-- Search Count moved to top of Search HUD.
+## Version 0.16.1 Build: 2021-11-09
+### Fixed
+- User search not resetting "Search Results" on new search
 
 ---
 
+
+## Version 0.16.0 Build: 2021-07-05
+### Changed
+- Search Count moved to top of Search HUD.
 
 ## Version 0.15.0 Build: 2021-04-09
 #### Added

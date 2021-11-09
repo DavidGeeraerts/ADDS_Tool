@@ -39,8 +39,8 @@
 @Echo Off
 @SETLOCAL enableextensions
 SET $PROGRAM_NAME=Active_Directory_Domain_Services_Tool
-SET $Version=0.16.0
-SET $BUILD=2021-07-05 08:30
+SET $Version=0.16.1
+SET $BUILD=2021-11-09 0830
 Title %$PROGRAM_NAME%
 Prompt ADT$G
 color 8F
@@ -733,6 +733,7 @@ GoTo:EOF
 	:: Reset Variables
 	SET $SEARCH_ATTRIBUTE=name
 	SET $SEARCH_KEY=
+	SET $LAST_SEARCH_COUNT=
 	:: Last Search Log Close - Notepad
 	call :LSLCN
 	call :SM
@@ -854,6 +855,7 @@ GoTo:EOF
 :SUU
 	SET $SEARCH_ATTRIBUTE=UPN
 	SET $SEARCH_KEY=
+	SET $LAST_SEARCH_COUNT=
 	:: Last Search Log Close - Notepad
 	call :LSLCN
 	call :SM
@@ -977,6 +979,7 @@ GoTo:EOF
 	SET $SEARCH_KEY=
 	SET $SEARCH_KEY_USER_FIRST=
 	SET $SEARCH_KEY_USER_LAST=
+	SET $LAST_SEARCH_COUNT=
 	:: Last Search Log Close - Notepad
 	call :LSLCN
 	call :SM
