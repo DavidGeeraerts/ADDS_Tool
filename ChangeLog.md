@@ -19,11 +19,21 @@
 
 ---
 
+## Version 0.17.0 Build: 2021-12-07
+### Fixed
+- Custom OU setting for AD Base
+- OU search detailed output grey on grey, now black on grey
+
+### Changed
+- var folder to cache folder
+- abort to Search Menu
+- Search settings menu
+
+---
+
 ## Version 0.16.1 Build: 2021-11-09
 ### Fixed
 - User search not resetting "Search Results" on new search
-
----
 
 
 ## Version 0.16.0 Build: 2021-07-05

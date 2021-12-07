@@ -39,13 +39,17 @@
 @Echo Off
 @SETLOCAL enableextensions
 SET $PROGRAM_NAME=Active_Directory_Domain_Services_Tool
-SET $Version=0.16.1
-SET $BUILD=2021-11-09 0830
+SET $Version=0.17.0
+SET $BUILD=2021-12-07 0930
 Title %$PROGRAM_NAME%
 Prompt ADT$G
 color 8F
 mode con:cols=80 lines=56
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+::###########################################################################::
+:: Declare Global variables [Defaults]
+::###########################################################################::
 
 ::: Configuration File ::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET $CONFIG_FILE=ADDS_Tool.config
@@ -195,35 +199,35 @@ IF %$SUPPRESS_VERBOSE% EQU 0 (SET $SUPPRESS_VERBOSE_N=No) ELSE (SET $SUPPRESS_VE
 	:: Launched from directory
 	SET "$PROGRAM_PATH=%~dp0"
 	::	Setup logging
-	IF NOT EXIST "%$LOGPATH%\var" MD "%$LOGPATH%\var"
+	IF NOT EXIST "%$LOGPATH%\cache" MD "%$LOGPATH%\cache"
 	cd /D "%$LOGPATH%"
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :::: PID ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :PID
 	:: Program information including PID
-	tasklist /FI "WINDOWTITLE eq %$PROGRAM_NAME%*" > "%$LogPath%\var\var_TaskInfo_PID.txt"
-	for /F "skip=3 tokens=2 delims= " %%P IN ('tasklist /FI "WINDOWTITLE eq %$PROGRAM_NAME%*"') DO echo %%P> "%$LogPath%\var\var_$PID.txt"
-	SET /P $PID= < "%$LogPath%\var\var_$PID.txt"
+	tasklist /FI "WINDOWTITLE eq %$PROGRAM_NAME%*" > "%$LogPath%\cache\var_TaskInfo_PID.txt"
+	for /F "skip=3 tokens=2 delims= " %%P IN ('tasklist /FI "WINDOWTITLE eq %$PROGRAM_NAME%*"') DO echo %%P> "%$LogPath%\cache\var_$PID.txt"
+	SET /P $PID= < "%$LogPath%\cache\var_$PID.txt"
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :::: fISO8601 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :fISO8601
 	:: Function to ensure ISO 8601 Date format yyyy-mmm-dd
 	:: Easiest way to get ISO date
-	@powershell Get-Date -format "yyyy-MM-dd" > "%$LogPath%\var\var_ISO8601_Date.txt"
-	SET /P $ISO_DATE= < "%$LogPath%\var\var_ISO8601_Date.txt"
+	@powershell Get-Date -format "yyyy-MM-dd" > "%$LogPath%\cache\var_ISO8601_Date.txt"
+	SET /P $ISO_DATE= < "%$LogPath%\cache\var_ISO8601_Date.txt"
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :::: UTC ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :UTC
 	:: Universal Time Coordinate
-	IF EXIST "%$LogPath%\var\var_$UTC.txt" SET /P $UTC= < "%$LogPath%\var\var_$UTC.txt"
-	IF NOT DEFINED $UTC FOR /F "tokens=1 delims=()" %%P IN ('wmic timezone get Description ^| findstr /C:"UTC" /I') DO ECHO %%P > "%$LogPath%\var\var_$UTC.txt"
-	IF NOT DEFINED $UTC SET /P $UTC= < "%$LogPath%\var\var_$UTC.txt"
-	IF EXIST "%$LogPath%\var\var_$UTC_STANDARD_NAME.txt" SET /P $UTC_STANDARD_NAME= < "%$LogPath%\var\var_$UTC_STANDARD_NAME.txt"
-	IF NOT DEFINED $UTC_STANDARD_NAME FOR /F "tokens=2 delims==" %%P IN ('wmic timezone get StandardName /value ^| findstr /C:"=" /I') DO ECHO %%P > "%$LogPath%\var\var_$UTC_STANDARD_NAME.txt"
-	IF NOT DEFINED $UTC_STANDARD_NAME SET /P $UTC_STANDARD_NAME= < "%$LogPath%\var\var_$UTC_STANDARD_NAME.txt"
+	IF EXIST "%$LogPath%\cache\var_$UTC.txt" SET /P $UTC= < "%$LogPath%\cache\var_$UTC.txt"
+	IF NOT DEFINED $UTC FOR /F "tokens=1 delims=()" %%P IN ('wmic timezone get Description ^| findstr /C:"UTC" /I') DO ECHO %%P > "%$LogPath%\cache\var_$UTC.txt"
+	IF NOT DEFINED $UTC SET /P $UTC= < "%$LogPath%\cache\var_$UTC.txt"
+	IF EXIST "%$LogPath%\cache\var_$UTC_STANDARD_NAME.txt" SET /P $UTC_STANDARD_NAME= < "%$LogPath%\cache\var_$UTC_STANDARD_NAME.txt"
+	IF NOT DEFINED $UTC_STANDARD_NAME FOR /F "tokens=2 delims==" %%P IN ('wmic timezone get StandardName /value ^| findstr /C:"=" /I') DO ECHO %%P > "%$LogPath%\cache\var_$UTC_STANDARD_NAME.txt"
+	IF NOT DEFINED $UTC_STANDARD_NAME SET /P $UTC_STANDARD_NAME= < "%$LogPath%\cache\var_$UTC_STANDARD_NAME.txt"
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :::: Session Log Header :::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -248,7 +252,7 @@ IF %$SUPPRESS_VERBOSE% EQU 0 (SET $SUPPRESS_VERBOSE_N=No) ELSE (SET $SUPPRESS_VE
 	::	If value is 1 domain, is 0 workgroup
 	SET $DOMAIN_PC=1
 	wmic computersystem get DomainRole /value | (FIND "0") && (SET $DOMAIN_PC=0)
-	echo %$DOMAIN_PC% > "%$LogPath%\var\var_$DOMAIN_PC.txt"
+	echo %$DOMAIN_PC% > "%$LogPath%\cache\var_$DOMAIN_PC.txt"
 	if %$DOMAIN_PC% EQU 0 SET $DOMAIN=%COMPUTERNAME%
 	if %$DOMAIN_PC% EQU 1 SET $DOMAIN=%USERDNSDOMAIN%
 	:: Can be local or domain
@@ -276,11 +280,11 @@ IF %$SUPPRESS_VERBOSE% EQU 0 (SET $SUPPRESS_VERBOSE_N=No) ELSE (SET $SUPPRESS_VE
 
 :::: Administrator Privilege Check ::::::::::::::::::::::::::::::::::::::::::::
 :subA
-	openfiles.exe 1> "%$LOGPATH%\var\var_$Admin_Status_M.txt" 2> "%$LOGPATH%\var\var_$Admin_Status_E.txt"
+	openfiles.exe 1> "%$LOGPATH%\cache\var_$Admin_Status_M.txt" 2> "%$LOGPATH%\cache\var_$Admin_Status_E.txt"
 	SET $ADMIN_STATUS=0
-	FIND "ERROR:" "%$LOGPATH%\var\var_$Admin_Status_E.txt" 2> nul > nul  && (SET $ADMIN_STATUS=1)
+	FIND "ERROR:" "%$LOGPATH%\cache\var_$Admin_Status_E.txt" 2> nul > nul  && (SET $ADMIN_STATUS=1)
 	IF %$ADMIN_STATUS% EQU 0 (SET "$ADMIN_STATUS_N=Yes") ELSE (SET "$ADMIN_STATUS_N=No")
-	echo %$ADMIN_STATUS_N%> "%$LOGPATH%\var\var_$Admin_Status_N.txt"
+	echo %$ADMIN_STATUS_N%> "%$LOGPATH%\cache\var_$Admin_Status_N.txt"
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :::: Check RSAT-Remote Server Administration Tools ::::::::::::::::::::::::::::
@@ -334,9 +338,9 @@ GoTo end
 	SET $DISM_ERR=%ERRORLEVEL%
 	echo $DISM_ERR:%DISM_STATUS%
 	::after install check
-	DISM /Online /Get-CapabilityInfo /CapabilityName:%$RSAT_ADDS_FULL% > "%$LOGPATH%\var\var_DISM_ADDS.txt"
-	FIND /I "State : Installed" "%$LOGPATH%\var\var_DISM_ADDS.txt"
-	type "%$LOGPATH%\var\var_DISM_ADDS.txt" >> "%$LogPath%\%$SESSION_LOG%"
+	DISM /Online /Get-CapabilityInfo /CapabilityName:%$RSAT_ADDS_FULL% > "%$LOGPATH%\cache\var_DISM_ADDS.txt"
+	FIND /I "State : Installed" "%$LOGPATH%\cache\var_DISM_ADDS.txt"
+	type "%$LOGPATH%\cache\var_DISM_ADDS.txt" >> "%$LogPath%\%$SESSION_LOG%"
 	SET $RSAT_STATUS=%ERRORLEVEL%
 	IF %$RSAT_STATUS% NEQ 0 SET $PREREQUISITE_STATUS=%$RSAT_STATUS%
 	IF %$RSAT_STATUS% NEQ 0 GoTo err20
@@ -346,7 +350,7 @@ GoTo end
 :::: Stopwatch - Start ::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :Start
 :: Capture program load time
-	@PowerShell.exe -c "$span=([TimeSpan]'%Time%' - [TimeSpan]'%$START_LOAD_TIME%'); '{0:00}:{1:00}:{2:00}.{3:00}' -f $span.Hours, $span.Minutes, $span.Seconds, $span.Milliseconds" > "%$LogPath%\var\var_Load_Time.txt"
+	@PowerShell.exe -c "$span=([TimeSpan]'%Time%' - [TimeSpan]'%$START_LOAD_TIME%'); '{0:00}:{1:00}:{2:00}.{3:00}' -f $span.Hours, $span.Minutes, $span.Seconds, $span.Milliseconds" > "%$LogPath%\cache\var_Load_Time.txt"
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :::: Parameters :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -355,17 +359,17 @@ GoTo end
 	SET $PARAMETER1=%~1
 	IF NOT DEFINED $PARAMETER1 GoTo skipParam
 	set $SEARCH_TYPE=%$PARAMETER1%
-	echo %$SEARCH_TYPE%> "%$LOGPATH%\var\var_$SEARCH_TYPE.txt"
+	echo %$SEARCH_TYPE%> "%$LOGPATH%\cache\var_$SEARCH_TYPE.txt"
 	:: Parameter #2 Attribute
 	SET $PARAMETER2=%~2
 	IF NOT DEFINED $PARAMETER2 GoTo skipParam
 	set $SEARCH_ATTRIBUTE=%$PARAMETER2%
-	echo %$SEARCH_ATTRIBUTE%> "%$LOGPATH%\var\var_$SEARCH_ATTRIBUTE.txt"
+	echo %$SEARCH_ATTRIBUTE%> "%$LOGPATH%\cache\var_$SEARCH_ATTRIBUTE.txt"
 	:: Parameter #3 Search Key
 	SET $PARAMETER3=%~3
 	IF NOT DEFINED $PARAMETER3 GoTo skipParam
 	set $SEARCH_KEY=%$PARAMETER3%
-	echo %$SEARCH_KEY%> "%$LOGPATH%\var\var_$SEARCH_KEY.txt"
+	echo %$SEARCH_KEY%> "%$LOGPATH%\cache\var_$SEARCH_KEY.txt"
 	:: Automated Search
 	GoTo SAUTO
 :skipParam
@@ -539,8 +543,8 @@ GoTo end
 
 :::: Total Lapse Time :::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :subTLT
-	@PowerShell.exe -c "$span=([TimeSpan]'%Time%' - [TimeSpan]'%$START_TIME%'); '{0:00}:{1:00}:{2:00}.{3:00}' -f $span.Hours, $span.Minutes, $span.Seconds, $span.Milliseconds" > "%$LogPath%\var\var_Total_Lapsed_Time.txt"
-	SET /P $TOTAL_LAPSE_TIME= < "%$LogPath%\var\var_Total_Lapsed_Time.txt"
+	@PowerShell.exe -c "$span=([TimeSpan]'%Time%' - [TimeSpan]'%$START_TIME%'); '{0:00}:{1:00}:{2:00}.{3:00}' -f $span.Hours, $span.Minutes, $span.Seconds, $span.Milliseconds" > "%$LogPath%\cache\var_Total_Lapsed_Time.txt"
+	SET /P $TOTAL_LAPSE_TIME= < "%$LogPath%\cache\var_Total_Lapsed_Time.txt"
 	GoTo:EOF
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -615,20 +619,20 @@ GoTo:EOF
 	:: Check for sorted
 	if %$SORTED% EQU 1 GoTo jumpSUS
 	::	unsorted
-		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=*)(%$SEARCH_ATTRIBUTE%=%$SEARCH_KEY%))" -attr name displayName distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_N_DN.txt"
-		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=*)(%$SEARCH_ATTRIBUTE%=%$SEARCH_KEY%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_DN.txt"
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=*)(%$SEARCH_ATTRIBUTE%=%$SEARCH_KEY%))" -attr name displayName distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=*)(%$SEARCH_ATTRIBUTE%=%$SEARCH_KEY%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_DN.txt"
 	GoTo skipSUS
 :jumpSUS
 	::	sorted
-		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=*)(%$SEARCH_ATTRIBUTE%=%$SEARCH_KEY%))" -attr name displayName distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_N_DN.txt"
-		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=*)(%$SEARCH_ATTRIBUTE%=%$SEARCH_KEY%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_DN.txt"
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=*)(%$SEARCH_ATTRIBUTE%=%$SEARCH_KEY%))" -attr name displayName distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=*)(%$SEARCH_ATTRIBUTE%=%$SEARCH_KEY%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_DN.txt"
 :skipSUS
 
 	:: Check results
-	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\var\var_Last_Search_N_DN.txt"') DO echo %%K > "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\cache\var_Last_Search_N_DN.txt"') DO echo %%K > "%$LogPath%\cache\var_Last_Search_Count.txt"
 	:: remove leading space
-	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\var\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\var\var_Last_Search_Count.txt"
-	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\cache\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\cache\var_Last_Search_Count.txt"
+	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\cache\var_Last_Search_Count.txt"
 	call :SM
 	IF %$LAST_SEARCH_COUNT% EQU 0 (
 		echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -639,20 +643,20 @@ GoTo:EOF
 	)
 
 	:: Munge N_DN file
-	IF EXIST "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
-	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
-	type "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_N_DN.txt"
+	IF EXIST "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt" DEL /Q /F "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\cache\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt"
+	type "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt" > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
 	:: Munge DN file
-	IF EXIST "%$LogPath%\var\var_Last_Search_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_DN_munge.txt"
-	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_DN_munge.txt"
-	type "%$LogPath%\var\var_Last_Search_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_DN.txt"
+	IF EXIST "%$LogPath%\cache\var_Last_Search_DN_munge.txt" DEL /Q /F "%$LogPath%\cache\var_Last_Search_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\cache\var_Last_Search_DN.txt"') DO echo %%M >> "%$LogPath%\cache\var_Last_Search_DN_munge.txt"
+	type "%$LogPath%\cache\var_Last_Search_DN_munge.txt" > "%$LogPath%\cache\var_Last_Search_DN.txt"
 	:: Output search results
 	echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Number of search results: %$LAST_SEARCH_COUNT%
 	@powershell Write-Host "Processing..." -ForegroundColor DarkYellow
 	echo Name					displayName			distinguishedName >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	type "%$LogPath%\var\var_Last_Search_N_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	type "%$LogPath%\cache\var_Last_Search_N_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	IF %$SUPPRESS_VERBOSE% EQU 1 GoTo jumpSUO
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -664,7 +668,7 @@ GoTo:EOF
 	REM	e.g. 293 sarch result:
 	REM powershell	Total Search Time: 00:07:52.610
 	REM echo		Total Search Time: 00:05:34.370
-	FOR /F "tokens=* delims=" %%N IN (%$LogPath%\var\var_Last_Search_DN.txt) DO (
+	FOR /F "tokens=* delims=" %%N IN (%$LogPath%\cache\var_Last_Search_DN.txt) DO (
 		(call :SM) & (
 		@powershell Write-Host "Processing verbose..." -ForegroundColor DarkYellow) & (
 		@powershell Write-Host '%%N' -ForegroundColor DarkGray) & (
@@ -715,7 +719,7 @@ GoTo:EOF
 	echo [4] Display name
 	echo [5] Custom attribute search
 	echo [6] Global
-	echo [7] Abort
+	echo [7] Search menu
 	echo.
 	Choice /c 1234567
 	echo.
@@ -763,20 +767,20 @@ GoTo:EOF
 	:: Check for sorted
 	if %$SORTED% EQU 1 GoTo jumpSUNS
 	:: Unsorted
-	DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_KEY%" -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_N.txt"
-	DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_KEY%" -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_KEY%" -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_N.txt"
+	DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_KEY%" -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_DN.txt"
 	GoTo skipSUNS
 
 :jumpSUNS
 	:: Sorted
-	DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_KEY%" -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_N.txt"
-	DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_KEY%" -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_KEY%" -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_N.txt"
+	DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_KEY%" -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_DN.txt"
 :skipSUNS
 	:: Check results
-	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\cache\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\cache\var_Last_Search_Count.txt"
 	:: remove leading space
-	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\var\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\var\var_Last_Search_Count.txt"
-	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\cache\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\cache\var_Last_Search_Count.txt"
+	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\cache\var_Last_Search_Count.txt"
 	call :SM
 	IF %$LAST_SEARCH_COUNT% EQU 0 (
 		echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -791,10 +795,10 @@ GoTo:EOF
 	@powershell Write-Host "Processing..." -ForegroundColor DarkYellow
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo User Names returned: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	type "%$LogPath%\var\var_Last_Search_N.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	type "%$LogPath%\cache\var_Last_Search_N.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo User Distinguisged Names: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	type "%$LogPath%\var\var_Last_Search_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	type "%$LogPath%\cache\var_Last_Search_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	IF %$SUPPRESS_VERBOSE% EQU 1 GoTo jumpSUNO
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -802,7 +806,7 @@ GoTo:EOF
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Detailed Output
-	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
+	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\cache\var_Last_Search_DN.txt") DO (
 		call :SM
 		@powershell Write-Host "Processing verbose..." -ForegroundColor DarkYellow
 		@powershell Write-Host '%%N' -ForegroundColor DarkGray
@@ -884,20 +888,20 @@ GoTo:EOF
 	:: Check for sorted
 	if %$SORTED% EQU 1 GoTo jumpSUUS
 	:: Unsorted
-	DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -upn "%$SEARCH_KEY%" -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_N.txt"
-	DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -upn "%$SEARCH_KEY%" -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -upn "%$SEARCH_KEY%" -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_N.txt"
+	DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -upn "%$SEARCH_KEY%" -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_DN.txt"
 
 	GoTo skipSUUS
 :jumpSUUS
 	:: Sorted
-	DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -upn "%$SEARCH_KEY%" -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_N.txt"
-	DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -upn "%$SEARCH_KEY%" -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -upn "%$SEARCH_KEY%" -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_N.txt"
+	DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -upn "%$SEARCH_KEY%" -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_DN.txt"
 :skipSUUS
 	:: Check results
-	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\cache\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\cache\var_Last_Search_Count.txt"
 	:: remove leading space
-	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\var\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\var\var_Last_Search_Count.txt"
-	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\cache\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\cache\var_Last_Search_Count.txt"
+	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\cache\var_Last_Search_Count.txt"
 	call :SM
 	IF %$LAST_SEARCH_COUNT% EQU 0 (
 		echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -912,10 +916,10 @@ GoTo:EOF
 	@powershell Write-Host "Processing..." -ForegroundColor DarkYellow
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo User Names returned: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	type "%$LogPath%\var\var_Last_Search_N.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	type "%$LogPath%\cache\var_Last_Search_N.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo User Distinguisged Names: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	type "%$LogPath%\var\var_Last_Search_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	type "%$LogPath%\cache\var_Last_Search_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	IF %$SUPPRESS_VERBOSE% EQU 1 GoTo jumpSUUO
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -923,7 +927,7 @@ GoTo:EOF
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Detailed Output
-	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
+	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\cache\var_Last_Search_DN.txt") DO (
 	call :SM
 	@powershell Write-Host "Processing verbose..." -ForegroundColor DarkYellow
 	@powershell Write-Host '%%N' -ForegroundColor DarkGray
@@ -1017,19 +1021,19 @@ GoTo:EOF
 	:: Check for sorted
 	if %$SORTED% EQU 1 GoTo	jumpSUFLS
 	:: Unsorted
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(givenName=%$SEARCH_KEY_USER_FIRST%)(sn=%$SEARCH_KEY_USER_LAST%))" -attr name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_N_DN.txt"
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(givenName=%$SEARCH_KEY_USER_FIRST%)(sn=%$SEARCH_KEY_USER_LAST%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(givenName=%$SEARCH_KEY_USER_FIRST%)(sn=%$SEARCH_KEY_USER_LAST%))" -attr name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(givenName=%$SEARCH_KEY_USER_FIRST%)(sn=%$SEARCH_KEY_USER_LAST%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_DN.txt"
 	GoTo skipSUFLS
 :jumpSUFLS
 	:: Sorted
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(givenName=%$SEARCH_KEY_USER_FIRST%)(sn=%$SEARCH_KEY_USER_LAST%))" -attr name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_N_DN.txt"
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(givenName=%$SEARCH_KEY_USER_FIRST%)(sn=%$SEARCH_KEY_USER_LAST%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(givenName=%$SEARCH_KEY_USER_FIRST%)(sn=%$SEARCH_KEY_USER_LAST%))" -attr name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(givenName=%$SEARCH_KEY_USER_FIRST%)(sn=%$SEARCH_KEY_USER_LAST%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_DN.txt"
 :skipSUFLS
 	:: Check results
-	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\cache\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\cache\var_Last_Search_Count.txt"
 	:: remove leading space
-	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\var\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\var\var_Last_Search_Count.txt"
-	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\cache\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\cache\var_Last_Search_Count.txt"
+	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\cache\var_Last_Search_Count.txt"
 	call :SM
 	IF %$LAST_SEARCH_COUNT% EQU 0 (
 		echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -1045,14 +1049,14 @@ GoTo:EOF
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo User Name					User DN >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Munge N_DN file
-	IF EXIST "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
-	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
-	type "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_N_DN.txt"
-	type "%$LogPath%\var\var_Last_Search_N_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	IF EXIST "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt" DEL /Q /F "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\cache\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt"
+	type "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt" > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
+	type "%$LogPath%\cache\var_Last_Search_N_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Munge DN file
-	IF EXIST "%$LogPath%\var\var_Last_Search_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_DN_munge.txt"
-	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_DN_munge.txt"
-	type "%$LogPath%\var\var_Last_Search_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_DN.txt"
+	IF EXIST "%$LogPath%\cache\var_Last_Search_DN_munge.txt" DEL /Q /F "%$LogPath%\cache\var_Last_Search_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\cache\var_Last_Search_DN.txt"') DO echo %%M >> "%$LogPath%\cache\var_Last_Search_DN_munge.txt"
+	type "%$LogPath%\cache\var_Last_Search_DN_munge.txt" > "%$LogPath%\cache\var_Last_Search_DN.txt"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	IF %$SUPPRESS_VERBOSE% EQU 1 GoTo jumpSUFLO
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -1060,7 +1064,7 @@ GoTo:EOF
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Detailed Output
-	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
+	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\cache\var_Last_Search_DN.txt") DO (
 	call :SM
 	@powershell Write-Host "Processing verbose..." -ForegroundColor DarkYellow
 	@powershell Write-Host '%%N' -ForegroundColor DarkGray
@@ -1144,21 +1148,21 @@ GoTo:EOF
 	:: Check for sorted
 	if %$SORTED% EQU 1 GoTo jumpSUDNS
 	:: Unsorted
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(displayName=%$SEARCH_KEY_USER_DIPLAYNAME%))" -attr displayName name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_N_DN.txt"
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(displayName=%$SEARCH_KEY_USER_DIPLAYNAME%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(displayName=%$SEARCH_KEY_USER_DIPLAYNAME%))" -attr displayName name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(displayName=%$SEARCH_KEY_USER_DIPLAYNAME%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_DN.txt"
 	GoTo skipSUDNS
 
 :jumpSUDNS
 	:: Sorted
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(displayName=%$SEARCH_KEY_USER_DIPLAYNAME%))" -attr displayName name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_N_DN.txt"
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(displayName=%$SEARCH_KEY_USER_DIPLAYNAME%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(displayName=%$SEARCH_KEY_USER_DIPLAYNAME%))" -attr displayName name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=user)(displayName=%$SEARCH_KEY_USER_DIPLAYNAME%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_DN.txt"
 
 :skipSUDNS
 	:: Check results
-	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\cache\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\cache\var_Last_Search_Count.txt"
 	:: remove leading space
-	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\var\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\var\var_Last_Search_Count.txt"
-	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\cache\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\cache\var_Last_Search_Count.txt"
+	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\cache\var_Last_Search_Count.txt"
 	call :SM
 	IF %$LAST_SEARCH_COUNT% EQU 0 (
 		echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -1174,14 +1178,14 @@ GoTo:EOF
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo User DisplayName			Name				User DN >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Munge N_DN file
-	IF EXIST "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
-	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
-	type "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_N_DN.txt"
-	type "%$LogPath%\var\var_Last_Search_N_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	IF EXIST "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt" DEL /Q /F "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\cache\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt"
+	type "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt" > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
+	type "%$LogPath%\cache\var_Last_Search_N_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Munge DN file
-	IF EXIST "%$LogPath%\var\var_Last_Search_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_DN_munge.txt"
-	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_DN_munge.txt"
-	type "%$LogPath%\var\var_Last_Search_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_DN.txt"
+	IF EXIST "%$LogPath%\cache\var_Last_Search_DN_munge.txt" DEL /Q /F "%$LogPath%\cache\var_Last_Search_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\cache\var_Last_Search_DN.txt"') DO echo %%M >> "%$LogPath%\cache\var_Last_Search_DN_munge.txt"
+	type "%$LogPath%\cache\var_Last_Search_DN_munge.txt" > "%$LogPath%\cache\var_Last_Search_DN.txt"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	IF %$SUPPRESS_VERBOSE% EQU 1 GoTo jumpSUDNO
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -1189,7 +1193,7 @@ GoTo:EOF
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Detailed Output
-	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
+	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\cache\var_Last_Search_DN.txt") DO (
 	call :SM
 	@powershell Write-Host "Processing verbose..." -ForegroundColor DarkYellow
 	@powershell Write-Host '%%N' -ForegroundColor DarkGray
@@ -1292,19 +1296,19 @@ GoTo:EOF
 	:: Check for sorted
 	if %$SORTED% EQU 1 GoTo jumpSUCAS
 	:: Unsorted
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&%$FILTER%)" -attr %$SEARCH_ATTRIBUTE% name displayName distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_N_DN.txt"
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&%$FILTER%)" -attr distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&%$FILTER%)" -attr %$SEARCH_ATTRIBUTE% name displayName distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&%$FILTER%)" -attr distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_DN.txt"
 	GoTo skipSUCAS
 :jumpSUCAS
 	:: Sorted
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&%$FILTER%)" -attr %$SEARCH_ATTRIBUTE% name displayName distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_N_DN.txt"
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&%$FILTER%)" -attr distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&%$FILTER%)" -attr %$SEARCH_ATTRIBUTE% name displayName distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&%$FILTER%)" -attr distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_DN.txt"
 :skipSUCAS
 	:: Check results
-	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\cache\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\cache\var_Last_Search_Count.txt"
 	:: remove leading space
-	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\var\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\var\var_Last_Search_Count.txt"
-	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\cache\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\cache\var_Last_Search_Count.txt"
+	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\cache\var_Last_Search_Count.txt"
 	call :SM
 	IF %$LAST_SEARCH_COUNT% EQU 0 (
 		echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -1320,14 +1324,14 @@ GoTo:EOF
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo %$SEARCH_ATTRIBUTE%		Name	DisplayName			distinguishedName >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Munge N_DN file
-	IF EXIST "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
-	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
-	type "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_N_DN.txt"
-	type "%$LogPath%\var\var_Last_Search_N_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	IF EXIST "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt" DEL /Q /F "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\cache\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt"
+	type "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt" > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
+	type "%$LogPath%\cache\var_Last_Search_N_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Munge DN file
-	IF EXIST "%$LogPath%\var\var_Last_Search_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_DN_munge.txt"
-	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_DN_munge.txt"
-	type "%$LogPath%\var\var_Last_Search_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_DN.txt"
+	IF EXIST "%$LogPath%\cache\var_Last_Search_DN_munge.txt" DEL /Q /F "%$LogPath%\cache\var_Last_Search_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\cache\var_Last_Search_DN.txt"') DO echo %%M >> "%$LogPath%\cache\var_Last_Search_DN_munge.txt"
+	type "%$LogPath%\cache\var_Last_Search_DN_munge.txt" > "%$LogPath%\cache\var_Last_Search_DN.txt"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	IF %$SUPPRESS_VERBOSE% EQU 1 GoTo jumpSUCAO
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -1335,7 +1339,7 @@ GoTo:EOF
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Detailed Output
-	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
+	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\cache\var_Last_Search_DN.txt") DO (
 	call :SM
 	@powershell Write-Host "Processing verbose..." -ForegroundColor DarkYellow
 	@powershell Write-Host '%%N' -ForegroundColor DarkGray
@@ -1391,7 +1395,7 @@ GoTo:EOF
 	echo [1] Inactive
 	echo [2] StalePassword
 	echo [3] Disabled
-	echo [4] Abort
+	echo [4] Search menu
 	echo.
 	Choice /c 1234
 	echo.
@@ -1442,21 +1446,21 @@ GoTo:EOF
 	:: Check for sorted
 	if %$SORTED% EQU 1 GoTo jumpSUGIS
 	:: Unsorted
-	DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_NAME_KEY%" -inactive %$SEARCH_INACTIVE_KEY% -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_N.txt"
-	DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_NAME_KEY%" -inactive %$SEARCH_INACTIVE_KEY% -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_NAME_KEY%" -inactive %$SEARCH_INACTIVE_KEY% -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_N.txt"
+	DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_NAME_KEY%" -inactive %$SEARCH_INACTIVE_KEY% -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_DN.txt"
 	GoTo skipSUGIS
 
 :jumpSUGIS
 	:: Sorted
-	DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_NAME_KEY%" -inactive %$SEARCH_INACTIVE_KEY% -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_N.txt"
-	DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_NAME_KEY%" -inactive %$SEARCH_INACTIVE_KEY% -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_NAME_KEY%" -inactive %$SEARCH_INACTIVE_KEY% -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_N.txt"
+	DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_NAME_KEY%" -inactive %$SEARCH_INACTIVE_KEY% -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_DN.txt"
 
 :skipSUGIS
 	:: Check results
-	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\cache\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\cache\var_Last_Search_Count.txt"
 	:: remove leading space
-	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\var\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\var\var_Last_Search_Count.txt"
-	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\cache\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\cache\var_Last_Search_Count.txt"
+	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\cache\var_Last_Search_Count.txt"
 	call :SM
 	IF %$LAST_SEARCH_COUNT% EQU 0 (
 		echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -1471,10 +1475,10 @@ GoTo:EOF
 	@powershell Write-Host "Processing..." -ForegroundColor DarkYellow
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo User Names returned: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	type "%$LogPath%\var\var_Last_Search_N.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	type "%$LogPath%\cache\var_Last_Search_N.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo User Distinguisged Names: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	type "%$LogPath%\var\var_Last_Search_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	type "%$LogPath%\cache\var_Last_Search_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	IF %$SUPPRESS_VERBOSE% EQU 1 GoTo jumpSUGIO
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -1482,7 +1486,7 @@ GoTo:EOF
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Detailed Output
-	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
+	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\cache\var_Last_Search_DN.txt") DO (
 	call :SM
 	@powershell Write-Host "Processing verbose..." -ForegroundColor DarkYellow
 	@powershell Write-Host '%%N' -ForegroundColor DarkGray
@@ -1572,22 +1576,22 @@ GoTo:EOF
 	:: Check for sorted
 	if %$SORTED% EQU 1 GoTo jumpSUGSS
 	:: Unsorted
-	DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_NAME_KEY%" -stalepwd %$SEARCH_STALEPWD_KEY% -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_N.txt"
-	DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_NAME_KEY%" -stalepwd %$SEARCH_STALEPWD_KEY% -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_NAME_KEY%" -stalepwd %$SEARCH_STALEPWD_KEY% -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_N.txt"
+	DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_NAME_KEY%" -stalepwd %$SEARCH_STALEPWD_KEY% -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_DN.txt"
 	GoTo skipSUGSS
 
 :jumpSUGSS
 	:: Sorted
-	DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_NAME_KEY%" -stalepwd %$SEARCH_STALEPWD_KEY% -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_N.txt"
-	DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_NAME_KEY%" -stalepwd %$SEARCH_STALEPWD_KEY% -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_NAME_KEY%" -stalepwd %$SEARCH_STALEPWD_KEY% -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_N.txt"
+	DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_NAME_KEY%" -stalepwd %$SEARCH_STALEPWD_KEY% -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_DN.txt"
 
 
 :skipSUGSS
 	:: Check results
-	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\cache\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\cache\var_Last_Search_Count.txt"
 	:: remove leading space
-	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\var\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\var\var_Last_Search_Count.txt"
-	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\cache\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\cache\var_Last_Search_Count.txt"
+	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\cache\var_Last_Search_Count.txt"
 	call :SM
 	IF %$LAST_SEARCH_COUNT% EQU 0 (
 		echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -1602,10 +1606,10 @@ GoTo:EOF
 	@powershell Write-Host "Processing..." -ForegroundColor DarkYellow
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo User Names returned: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	type "%$LogPath%\var\var_Last_Search_N.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	type "%$LogPath%\cache\var_Last_Search_N.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo User Distinguisged Names: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	type "%$LogPath%\var\var_Last_Search_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	type "%$LogPath%\cache\var_Last_Search_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	IF %$SUPPRESS_VERBOSE% EQU 1 GoTo jumpSUGSO
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -1613,7 +1617,7 @@ GoTo:EOF
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Detailed Output
-	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
+	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\cache\var_Last_Search_DN.txt") DO (
 	call :SM
 	@powershell Write-Host "Processing verbose..." -ForegroundColor DarkYellow
 	@powershell Write-Host '%%N' -ForegroundColor DarkGray
@@ -1696,20 +1700,20 @@ GoTo:EOF
 	:: Check for sorted
 	if %$SORTED% EQU 1 GoTo jumpSUGDS
 	:: Unsorted
-	DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_NAME_KEY%" -disabled -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_N.txt"
-	DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_NAME_KEY%" -disabled -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_NAME_KEY%" -disabled -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_N.txt"
+	DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_NAME_KEY%" -disabled -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_DN.txt"
 	GoTo skipSUGDS
 :jumpSUGDS
 	:: Sorted
-	DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_NAME_KEY%" -disabled -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_N.txt"
-	DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_NAME_KEY%" -disabled -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_NAME_KEY%" -disabled -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_N.txt"
+	DSQUERY USER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_NAME_KEY%" -disabled -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_DN.txt"
 
 :skipSUGDS
 	:: Check results
-	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\cache\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\cache\var_Last_Search_Count.txt"
 	:: remove leading space
-	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\var\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\var\var_Last_Search_Count.txt"
-	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\cache\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\cache\var_Last_Search_Count.txt"
+	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\cache\var_Last_Search_Count.txt"
 	call :SM
 	IF %$LAST_SEARCH_COUNT% EQU 0 (
 		echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -1724,10 +1728,10 @@ GoTo:EOF
 	@powershell Write-Host "Processing..." -ForegroundColor DarkYellow
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo User Names returned: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	type "%$LogPath%\var\var_Last_Search_N.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	type "%$LogPath%\cache\var_Last_Search_N.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo User Distinguisged Names: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	type "%$LogPath%\var\var_Last_Search_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	type "%$LogPath%\cache\var_Last_Search_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	IF %$SUPPRESS_VERBOSE% EQU 1 GoTo jumpSUGDO
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -1735,7 +1739,7 @@ GoTo:EOF
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Detailed Output
-	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
+	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\cache\var_Last_Search_DN.txt") DO (
 	call :SM
 	@powershell Write-Host "Processing verbose..." -ForegroundColor DarkYellow
 	@powershell Write-Host '%%N' -ForegroundColor DarkGray
@@ -1798,7 +1802,7 @@ GoTo:EOF
 	Echo [2] Description
 	Echo [3] DisplayName
 	echo [4] Multi-Attribute
-	echo [5] Abort
+	echo [5] Search menu
 	Echo.
 	Choice /c 12345
 	If ERRORLevel 5 GoTo Search
@@ -1841,20 +1845,20 @@ GoTo:EOF
 	:: Check for sorted
 	if %$SORTED% EQU 1 GoTo jumpSGNS
 	:: Unsorted
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=group)(name=%$SEARCH_KEY%))" -attr name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_N_DN.txt"
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=group)(name=%$SEARCH_KEY%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=group)(name=%$SEARCH_KEY%))" -attr name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=group)(name=%$SEARCH_KEY%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_DN.txt"
 	GoTo skipSGS
 :jumpSGNS
 	:: Sorted
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=group)(name=%$SEARCH_KEY%))" -attr name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_N_DN.txt"
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=group)(name=%$SEARCH_KEY%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=group)(name=%$SEARCH_KEY%))" -attr name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=group)(name=%$SEARCH_KEY%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_DN.txt"
 
 :skipSGS
 	:: Check results
-	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\cache\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\cache\var_Last_Search_Count.txt"
 	:: remove leading space
-	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\var\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\var\var_Last_Search_Count.txt"
-	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\cache\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\cache\var_Last_Search_Count.txt"
+	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\cache\var_Last_Search_Count.txt"
 	call :SM
 	IF %$LAST_SEARCH_COUNT% EQU 0 (
 		echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -1870,14 +1874,14 @@ GoTo:EOF
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Group Name					DN >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Munge N_DN file
-	IF EXIST "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
-	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
-	type "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_N_DN.txt"
-	type "%$LogPath%\var\var_Last_Search_N_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	IF EXIST "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt" DEL /Q /F "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\cache\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt"
+	type "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt" > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
+	type "%$LogPath%\cache\var_Last_Search_N_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Munge DN file
-	IF EXIST "%$LogPath%\var\var_Last_Search_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_DN_munge.txt"
-	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_DN_munge.txt"
-	type "%$LogPath%\var\var_Last_Search_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_DN.txt"
+	IF EXIST "%$LogPath%\cache\var_Last_Search_DN_munge.txt" DEL /Q /F "%$LogPath%\cache\var_Last_Search_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\cache\var_Last_Search_DN.txt"') DO echo %%M >> "%$LogPath%\cache\var_Last_Search_DN_munge.txt"
+	type "%$LogPath%\cache\var_Last_Search_DN_munge.txt" > "%$LogPath%\cache\var_Last_Search_DN.txt"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	IF %$SUPPRESS_VERBOSE% EQU 1 GoTo jumpSGNO
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -1885,7 +1889,7 @@ GoTo:EOF
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Detailed Output
-	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
+	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\cache\var_Last_Search_DN.txt") DO (
 	call :SM
 	@powershell Write-Host "Processing verbose..." -ForegroundColor DarkYellow
 	@powershell Write-Host '%%N' -ForegroundColor DarkGray
@@ -1956,20 +1960,20 @@ GoTo:EOF
 	:: Check for sorted
 	if %$SORTED% EQU 1 GoTo	jumpSGDS
 	:: Unsorted
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=group)(description=%$SEARCH_KEY%))" -attr name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_N_DN.txt"
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=group)(description=%$SEARCH_KEY%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=group)(description=%$SEARCH_KEY%))" -attr name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=group)(description=%$SEARCH_KEY%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_DN.txt"
 	GoTo skipSGDS
 :jumpSGDS
 	:: Sorted
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=group)(description=%$SEARCH_KEY%))" -attr name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_N_DN.txt"
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=group)(description=%$SEARCH_KEY%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=group)(description=%$SEARCH_KEY%))" -attr name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=group)(description=%$SEARCH_KEY%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_DN.txt"
 
 :skipSGDS
 	:: Check results
-	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\cache\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\cache\var_Last_Search_Count.txt"
 	:: remove leading space
-	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\var\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\var\var_Last_Search_Count.txt"
-	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\cache\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\cache\var_Last_Search_Count.txt"
+	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\cache\var_Last_Search_Count.txt"
 	call :SM
 	IF %$LAST_SEARCH_COUNT% EQU 0 (
 		echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -1985,14 +1989,14 @@ GoTo:EOF
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Group Name					DN >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Munge N_DN file
-	IF EXIST "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
-	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
-	type "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_N_DN.txt"
-	type "%$LogPath%\var\var_Last_Search_N_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	IF EXIST "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt" DEL /Q /F "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\cache\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt"
+	type "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt" > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
+	type "%$LogPath%\cache\var_Last_Search_N_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Munge DN file
-	IF EXIST "%$LogPath%\var\var_Last_Search_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_DN_munge.txt"
-	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_DN_munge.txt"
-	type "%$LogPath%\var\var_Last_Search_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_DN.txt"
+	IF EXIST "%$LogPath%\cache\var_Last_Search_DN_munge.txt" DEL /Q /F "%$LogPath%\cache\var_Last_Search_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\cache\var_Last_Search_DN.txt"') DO echo %%M >> "%$LogPath%\cache\var_Last_Search_DN_munge.txt"
+	type "%$LogPath%\cache\var_Last_Search_DN_munge.txt" > "%$LogPath%\cache\var_Last_Search_DN.txt"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	IF %$SUPPRESS_VERBOSE% EQU 1 GoTo jumpSGDO
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -2000,7 +2004,7 @@ GoTo:EOF
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Detailed Output
-	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
+	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\cache\var_Last_Search_DN.txt") DO (
 	call :SM
 	@powershell Write-Host "Processing verbose..." -ForegroundColor DarkYellow
 	@powershell Write-Host '%%N' -ForegroundColor DarkGray
@@ -2071,20 +2075,20 @@ GoTo:EOF
 	:: Check for sorted
 	if %$SORTED% EQU 1 GoTo	jumpSGDNS
 	:: Unsorted
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=group)(displayName=%$SEARCH_KEY%))" -attr name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_N_DN.txt"
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=group)(displayName=%$SEARCH_KEY%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=group)(displayName=%$SEARCH_KEY%))" -attr name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=group)(displayName=%$SEARCH_KEY%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_DN.txt"
 	GoTo skipSGDNS
 :jumpSGDNS
 	:: Sorted
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=group)(displayName=%$SEARCH_KEY%))" -attr name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_N_DN.txt"
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=group)(displayName=%$SEARCH_KEY%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=group)(displayName=%$SEARCH_KEY%))" -attr name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=group)(displayName=%$SEARCH_KEY%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_DN.txt"
 
 :skipSGDNS
 	:: Check results
-	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\cache\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\cache\var_Last_Search_Count.txt"
 	:: remove leading space
-	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\var\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\var\var_Last_Search_Count.txt"
-	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\cache\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\cache\var_Last_Search_Count.txt"
+	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\cache\var_Last_Search_Count.txt"
 	call :SM
 	IF %$LAST_SEARCH_COUNT% EQU 0 (
 		echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -2100,14 +2104,14 @@ GoTo:EOF
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Group Name					DN >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Munge N_DN file
-	IF EXIST "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
-	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
-	type "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_N_DN.txt"
-	type "%$LogPath%\var\var_Last_Search_N_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	IF EXIST "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt" DEL /Q /F "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\cache\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt"
+	type "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt" > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
+	type "%$LogPath%\cache\var_Last_Search_N_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Munge DN file
-	IF EXIST "%$LogPath%\var\var_Last_Search_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_DN_munge.txt"
-	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_DN_munge.txt"
-	type "%$LogPath%\var\var_Last_Search_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_DN.txt"
+	IF EXIST "%$LogPath%\cache\var_Last_Search_DN_munge.txt" DEL /Q /F "%$LogPath%\cache\var_Last_Search_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\cache\var_Last_Search_DN.txt"') DO echo %%M >> "%$LogPath%\cache\var_Last_Search_DN_munge.txt"
+	type "%$LogPath%\cache\var_Last_Search_DN_munge.txt" > "%$LogPath%\cache\var_Last_Search_DN.txt"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	IF %$SUPPRESS_VERBOSE% EQU 1 GoTo jumpSGDNO
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -2115,7 +2119,7 @@ GoTo:EOF
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Detailed Output
-	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
+	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\cache\var_Last_Search_DN.txt") DO (
 	call :SM
 	@powershell Write-Host "Processing verbose..." -ForegroundColor DarkYellow
 	@powershell Write-Host '%%N' -ForegroundColor DarkGray
@@ -2208,21 +2212,21 @@ GoTo:EOF
 	:: Check for sorted
 	if %$SORTED% EQU 1 GoTo jumpSGMS
 	:: Unsorted
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=group)(name=%$SEARCH_KEY_GROUP_NAME%)(description=%$SEARCH_KEY_GROUP_DESCRIPTION%)(displayName=%$SEARCH_KEY_GROUP_DISPLAYNAME%))" -attr name description displayName distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_N_DN.txt"
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=group)(name=%$SEARCH_KEY_GROUP_NAME%)(description=%$SEARCH_KEY_GROUP_DESCRIPTION%)(displayName=%$SEARCH_KEY_GROUP_DISPLAYNAME%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=group)(name=%$SEARCH_KEY_GROUP_NAME%)(description=%$SEARCH_KEY_GROUP_DESCRIPTION%)(displayName=%$SEARCH_KEY_GROUP_DISPLAYNAME%))" -attr name description displayName distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=group)(name=%$SEARCH_KEY_GROUP_NAME%)(description=%$SEARCH_KEY_GROUP_DESCRIPTION%)(displayName=%$SEARCH_KEY_GROUP_DISPLAYNAME%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_DN.txt"
 	GoTo skipSGMS
 
 :jumpSGMS
 	:: Sorted
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=group)(name=%$SEARCH_KEY_GROUP_NAME%)(description=%$SEARCH_KEY_GROUP_DESCRIPTION%)(displayName=%$SEARCH_KEY_GROUP_DISPLAYNAME%))" -attr name description displayName distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_N_DN.txt"
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=group)(name=%$SEARCH_KEY_GROUP_NAME%)(description=%$SEARCH_KEY_GROUP_DESCRIPTION%)(displayName=%$SEARCH_KEY_GROUP_DISPLAYNAME%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=group)(name=%$SEARCH_KEY_GROUP_NAME%)(description=%$SEARCH_KEY_GROUP_DESCRIPTION%)(displayName=%$SEARCH_KEY_GROUP_DISPLAYNAME%))" -attr name description displayName distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=group)(name=%$SEARCH_KEY_GROUP_NAME%)(description=%$SEARCH_KEY_GROUP_DESCRIPTION%)(displayName=%$SEARCH_KEY_GROUP_DISPLAYNAME%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_DN.txt"
 
 :skipSGMS
 	:: Check results
-	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\cache\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\cache\var_Last_Search_Count.txt"
 	:: remove leading space
-	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\var\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\var\var_Last_Search_Count.txt"
-	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\cache\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\cache\var_Last_Search_Count.txt"
+	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\cache\var_Last_Search_Count.txt"
 	call :SM
 	IF %$LAST_SEARCH_COUNT% EQU 0 (
 		echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -2238,14 +2242,14 @@ GoTo:EOF
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Group: Name				description				displayName						DN >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Munge N_DN file
-	IF EXIST "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
-	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
-	type "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_N_DN.txt"
-	type "%$LogPath%\var\var_Last_Search_N_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	IF EXIST "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt" DEL /Q /F "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\cache\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt"
+	type "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt" > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
+	type "%$LogPath%\cache\var_Last_Search_N_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Munge DN file
-	IF EXIST "%$LogPath%\var\var_Last_Search_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_DN_munge.txt"
-	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_DN_munge.txt"
-	type "%$LogPath%\var\var_Last_Search_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_DN.txt"
+	IF EXIST "%$LogPath%\cache\var_Last_Search_DN_munge.txt" DEL /Q /F "%$LogPath%\cache\var_Last_Search_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\cache\var_Last_Search_DN.txt"') DO echo %%M >> "%$LogPath%\cache\var_Last_Search_DN_munge.txt"
+	type "%$LogPath%\cache\var_Last_Search_DN_munge.txt" > "%$LogPath%\cache\var_Last_Search_DN.txt"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	IF %$SUPPRESS_VERBOSE% EQU 1 GoTo jumpSGMO
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -2253,7 +2257,7 @@ GoTo:EOF
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Detailed Output
-	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
+	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\cache\var_Last_Search_DN.txt") DO (
 	call :SM
 	@powershell Write-Host "Processing verbose..." -ForegroundColor DarkYellow
 	@powershell Write-Host '%%N' -ForegroundColor DarkGray
@@ -2346,20 +2350,20 @@ GoTo:EOF
 	:: Check for sorted
 	if %$SORTED% EQU 1 GoTo jumpSCNS
 	:: Unsorted
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=computer)(name=%$SEARCH_KEY%))" -attr name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_N_DN.txt"
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=computer)(name=%$SEARCH_KEY%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=computer)(name=%$SEARCH_KEY%))" -attr name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=computer)(name=%$SEARCH_KEY%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_DN.txt"
 	GoTo skipSCNS
 :jumpSCNS
 	:: Sorted
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=computer)(name=%$SEARCH_KEY%))" -attr name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_N_DN.txt"
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=computer)(name=%$SEARCH_KEY%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=computer)(name=%$SEARCH_KEY%))" -attr name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=computer)(name=%$SEARCH_KEY%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_DN.txt"
 
 :skipSCNS
 	:: Check results
-	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\cache\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\cache\var_Last_Search_Count.txt"
 	:: remove leading space
-	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\var\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\var\var_Last_Search_Count.txt"
-	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\cache\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\cache\var_Last_Search_Count.txt"
+	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\cache\var_Last_Search_Count.txt"
 	call :SM
 	IF %$LAST_SEARCH_COUNT% EQU 0 (
 		echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -2375,14 +2379,14 @@ GoTo:EOF
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo %$SEARCH_TYPE%: %$SEARCH_ATTRIBUTE%					DN >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Munge N_DN file
-	IF EXIST "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
-	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
-	type "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_N_DN.txt"
-	type "%$LogPath%\var\var_Last_Search_N_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	IF EXIST "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt" DEL /Q /F "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\cache\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt"
+	type "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt" > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
+	type "%$LogPath%\cache\var_Last_Search_N_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Munge DN file
-	IF EXIST "%$LogPath%\var\var_Last_Search_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_DN_munge.txt"
-	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_DN_munge.txt"
-	type "%$LogPath%\var\var_Last_Search_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_DN.txt"
+	IF EXIST "%$LogPath%\cache\var_Last_Search_DN_munge.txt" DEL /Q /F "%$LogPath%\cache\var_Last_Search_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\cache\var_Last_Search_DN.txt"') DO echo %%M >> "%$LogPath%\cache\var_Last_Search_DN_munge.txt"
+	type "%$LogPath%\cache\var_Last_Search_DN_munge.txt" > "%$LogPath%\cache\var_Last_Search_DN.txt"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	IF %$SUPPRESS_VERBOSE% EQU 1 GoTo jumpSCNO
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -2390,7 +2394,7 @@ GoTo:EOF
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Detailed Output
-	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
+	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\cache\var_Last_Search_DN.txt") DO (
 	call :SM
 	@powershell Write-Host "Processing verbose..." -ForegroundColor DarkYellow
 	@powershell Write-Host '%%N' -ForegroundColor DarkGray
@@ -2398,8 +2402,8 @@ GoTo:EOF
 	echo %$SEARCH_TYPE% DN: %%N >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%~N)" -attr description %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo LastLogonTimestamp: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%~N)" -attr lastLogonTimestamp %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_$lastLogonTimestamp.txt"
-	FOR /F "skip=1 delims=" %%P IN (%$LogPath%\var\var_$lastLogonTimestamp.txt) DO w32tm.exe /ntte %%P >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%~N)" -attr lastLogonTimestamp %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_$lastLogonTimestamp.txt"
+	FOR /F "skip=1 delims=" %%P IN (%$LogPath%\cache\var_$lastLogonTimestamp.txt) DO w32tm.exe /ntte %%P >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	DSGET computer %%N -disabled -s %$DC%.%$DOMAIN% %$DOMAIN_CREDENTIALS% 2> nul >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	dsget computer %%N -loc -s %$DC%.%$DOMAIN% %$DOMAIN_CREDENTIALS% 2> nul >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo MemberOf: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -2501,20 +2505,20 @@ GoTo:EOF
 	:: Check for sorted
 	if %$SORTED% EQU 1 GoTo jumpSCDS
 	:: Unsorted
-	DSQUERY COMPUTER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_KEY%" -disabled -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_N.txt"
-	DSQUERY COMPUTER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_KEY%" -disabled -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY COMPUTER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_KEY%" -disabled -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_N.txt"
+	DSQUERY COMPUTER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_KEY%" -disabled -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_DN.txt"
 	GoTo skipSCDS
 :jumpSCDS
 	:: Sorted
-	DSQUERY COMPUTER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_KEY%" -disabled -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_N.txt"
-	DSQUERY COMPUTER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_KEY%" -disabled -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY COMPUTER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_KEY%" -disabled -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_N.txt"
+	DSQUERY COMPUTER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_KEY%" -disabled -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_DN.txt"
 
 :skipSCDS
 	:: Check results
-	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\cache\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\cache\var_Last_Search_Count.txt"
 	:: remove leading space
-	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\var\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\var\var_Last_Search_Count.txt"
-	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\cache\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\cache\var_Last_Search_Count.txt"
+	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\cache\var_Last_Search_Count.txt"
 	call :SM
 	IF %$LAST_SEARCH_COUNT% EQU 0 (
 		echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -2529,12 +2533,12 @@ GoTo:EOF
 	@powershell Write-Host "Processing..." -ForegroundColor DarkYellow
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Computer Name			distinguishedName >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	IF EXIST "%$LogPath%\var\var_Last_Search_N_DN.txt" DEL /F /Q "%$LogPath%\var\var_Last_Search_N_DN.txt"
-	FOR /F " USEBACKQ tokens=* delims=" %%R IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
-		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%~R)" -attr name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% >> "%$LogPath%\var\var_Last_Search_N_DN.txt"
+	IF EXIST "%$LogPath%\cache\var_Last_Search_N_DN.txt" DEL /F /Q "%$LogPath%\cache\var_Last_Search_N_DN.txt"
+	FOR /F " USEBACKQ tokens=* delims=" %%R IN ("%$LogPath%\cache\var_Last_Search_DN.txt") DO (
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%~R)" -attr name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% >> "%$LogPath%\cache\var_Last_Search_N_DN.txt"
 		)
-	FINDSTR /V /C:"name" "%$LogPath%\var\var_Last_Search_N_DN.txt" > "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
-	type "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	FINDSTR /V /C:"name" "%$LogPath%\cache\var_Last_Search_N_DN.txt" > "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt"
+	type "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	IF %$SUPPRESS_VERBOSE% EQU 1 GoTo jumpSCDO
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -2542,7 +2546,7 @@ GoTo:EOF
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Detailed Output
-	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
+	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\cache\var_Last_Search_DN.txt") DO (
 	call :SM
 	@powershell Write-Host "Processing verbose..." -ForegroundColor DarkYellow
 	@powershell Write-Host '%%N' -ForegroundColor DarkGray
@@ -2550,8 +2554,8 @@ GoTo:EOF
 	echo %$SEARCH_TYPE% DN: %%N >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%~N)" -attr description %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo LastLogonTimestamp: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%~N)" -attr lastLogonTimestamp %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_$lastLogonTimestamp.txt"
-	FOR /F "skip=1 delims=" %%P IN (%$LogPath%\var\var_$lastLogonTimestamp.txt) DO w32tm.exe /ntte %%P >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%~N)" -attr lastLogonTimestamp %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_$lastLogonTimestamp.txt"
+	FOR /F "skip=1 delims=" %%P IN (%$LogPath%\cache\var_$lastLogonTimestamp.txt) DO w32tm.exe /ntte %%P >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	DSGET computer %%N -disabled -s %$DC%.%$DOMAIN% %$DOMAIN_CREDENTIALS% 2> nul >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	dsget computer %%N -loc -s %$DC%.%$DOMAIN% %$DOMAIN_CREDENTIALS% 2> nul >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo MemberOf: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -2627,19 +2631,19 @@ GoTo:EOF
 	if %$DEGUB_MODE% EQU 1 CALL :fVarD
 	:: Check for sorted
 	if %$SORTED% EQU 1 GoTo jumpSCIS
-	DSQUERY COMPUTER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_KEY_PC_NAME%" -inactive %$SEARCH_KEY% -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_N.txt"
-	DSQUERY COMPUTER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_KEY_PC_NAME%" -inactive %$SEARCH_KEY% -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY COMPUTER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_KEY_PC_NAME%" -inactive %$SEARCH_KEY% -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_N.txt"
+	DSQUERY COMPUTER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_KEY_PC_NAME%" -inactive %$SEARCH_KEY% -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_DN.txt"
 	GoTo skipSCIS
 :jumpSCIS
 	:: Sorted
-	DSQUERY COMPUTER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_KEY_PC_NAME%" -inactive %$SEARCH_KEY% -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_N.txt"
-	DSQUERY COMPUTER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_KEY_PC_NAME%" -inactive %$SEARCH_KEY% -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY COMPUTER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_KEY_PC_NAME%" -inactive %$SEARCH_KEY% -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_N.txt"
+	DSQUERY COMPUTER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_KEY_PC_NAME%" -inactive %$SEARCH_KEY% -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_DN.txt"
 :skipSCIS
 	:: Check results
-	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\cache\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\cache\var_Last_Search_Count.txt"
 	:: remove leading space
-	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\var\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\var\var_Last_Search_Count.txt"
-	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\cache\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\cache\var_Last_Search_Count.txt"
+	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\cache\var_Last_Search_Count.txt"
 	call :SM
 	IF %$LAST_SEARCH_COUNT% EQU 0 (
 		echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -2654,12 +2658,12 @@ GoTo:EOF
 	@powershell Write-Host "Processing..." -ForegroundColor DarkYellow
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Computer Name			distinguishedName >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	IF EXIST "%$LogPath%\var\var_Last_Search_N_DN.txt" DEL /F /Q "%$LogPath%\var\var_Last_Search_N_DN.txt"
-	FOR /F " USEBACKQ tokens=* delims=" %%R IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
-		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%~R)" -attr name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% >> "%$LogPath%\var\var_Last_Search_N_DN.txt"
+	IF EXIST "%$LogPath%\cache\var_Last_Search_N_DN.txt" DEL /F /Q "%$LogPath%\cache\var_Last_Search_N_DN.txt"
+	FOR /F " USEBACKQ tokens=* delims=" %%R IN ("%$LogPath%\cache\var_Last_Search_DN.txt") DO (
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%~R)" -attr name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% >> "%$LogPath%\cache\var_Last_Search_N_DN.txt"
 		)
-	FINDSTR /V /C:"name" "%$LogPath%\var\var_Last_Search_N_DN.txt" > "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
-	type "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	FINDSTR /V /C:"name" "%$LogPath%\cache\var_Last_Search_N_DN.txt" > "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt"
+	type "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	IF %$SUPPRESS_VERBOSE% EQU 1 GoTo jumpSCIO
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -2667,7 +2671,7 @@ GoTo:EOF
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Detailed Output
-	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
+	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\cache\var_Last_Search_DN.txt") DO (
 	call :SM
 	@powershell Write-Host "Processing verbose..." -ForegroundColor DarkYellow
 	@powershell Write-Host '%%N' -ForegroundColor DarkGray
@@ -2675,8 +2679,8 @@ GoTo:EOF
 	echo %$SEARCH_TYPE% DN: %%N >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%~N)" -attr description %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo LastLogonTimestamp: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%~N)" -attr lastLogonTimestamp %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_$lastLogonTimestamp.txt"
-	FOR /F "skip=1 delims=" %%P IN (%$LogPath%\var\var_$lastLogonTimestamp.txt) DO w32tm.exe /ntte %%P >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%~N)" -attr lastLogonTimestamp %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_$lastLogonTimestamp.txt"
+	FOR /F "skip=1 delims=" %%P IN (%$LogPath%\cache\var_$lastLogonTimestamp.txt) DO w32tm.exe /ntte %%P >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	DSGET computer %%N -disabled -s %$DC%.%$DOMAIN% %$DOMAIN_CREDENTIALS% 2> nul >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	dsget computer %%N -loc -s %$DC%.%$DOMAIN% %$DOMAIN_CREDENTIALS% 2> nul >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo MemberOf: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -2753,19 +2757,19 @@ GoTo:EOF
 	:: Check for sorted
 	if %$SORTED% EQU 1 GoTo jumpSCSS
 	:: Unsorted
-	DSQUERY COMPUTER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_KEY_PC_NAME%" -stalepwd %$SEARCH_STALEPWD% -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_N.txt"
-	DSQUERY COMPUTER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_KEY_PC_NAME%" -stalepwd %$SEARCH_STALEPWD% -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY COMPUTER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_KEY_PC_NAME%" -stalepwd %$SEARCH_STALEPWD% -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_N.txt"
+	DSQUERY COMPUTER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_KEY_PC_NAME%" -stalepwd %$SEARCH_STALEPWD% -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_DN.txt"
 	GoTo skipSCSS
 :jumpSCSS
 	:: Sorted
-	DSQUERY COMPUTER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_KEY_PC_NAME%" -stalepwd %$SEARCH_STALEPWD% -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_N.txt"
-	DSQUERY COMPUTER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_KEY_PC_NAME%" -stalepwd %$SEARCH_STALEPWD% -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY COMPUTER %$AD_BASE% -scope %$AD_SCOPE% -o rdn -name "%$SEARCH_KEY_PC_NAME%" -stalepwd %$SEARCH_STALEPWD% -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_N.txt"
+	DSQUERY COMPUTER %$AD_BASE% -scope %$AD_SCOPE% -o dn -name "%$SEARCH_KEY_PC_NAME%" -stalepwd %$SEARCH_STALEPWD% -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_DN.txt"
 :skipSCSS
 	:: Check results
-	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\cache\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\cache\var_Last_Search_Count.txt"
 	:: remove leading space
-	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\var\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\var\var_Last_Search_Count.txt"
-	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\cache\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\cache\var_Last_Search_Count.txt"
+	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\cache\var_Last_Search_Count.txt"
 	call :SM
 	IF %$LAST_SEARCH_COUNT% EQU 0 (
 		echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -2780,12 +2784,12 @@ GoTo:EOF
 	@powershell Write-Host "Processing..." -ForegroundColor DarkYellow
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Computer Name			distinguishedName >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	IF EXIST "%$LogPath%\var\var_Last_Search_N_DN.txt" DEL /F /Q "%$LogPath%\var\var_Last_Search_N_DN.txt"
-	FOR /F " USEBACKQ tokens=* delims=" %%R IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
-		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%~R)" -attr name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% >> "%$LogPath%\var\var_Last_Search_N_DN.txt"
+	IF EXIST "%$LogPath%\cache\var_Last_Search_N_DN.txt" DEL /F /Q "%$LogPath%\cache\var_Last_Search_N_DN.txt"
+	FOR /F " USEBACKQ tokens=* delims=" %%R IN ("%$LogPath%\cache\var_Last_Search_DN.txt") DO (
+		DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%~R)" -attr name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% >> "%$LogPath%\cache\var_Last_Search_N_DN.txt"
 		)
-	FINDSTR /V /C:"name" "%$LogPath%\var\var_Last_Search_N_DN.txt" > "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
-	type "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	FINDSTR /V /C:"name" "%$LogPath%\cache\var_Last_Search_N_DN.txt" > "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt"
+	type "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	IF %$SUPPRESS_VERBOSE% EQU 1 GoTo jumpSCSO
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -2793,7 +2797,7 @@ GoTo:EOF
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Detailed Output
-	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
+	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\cache\var_Last_Search_DN.txt") DO (
 	call :SM
 	@powershell Write-Host "Processing verbose..." -ForegroundColor DarkYellow
 	@powershell Write-Host '%%N' -ForegroundColor DarkGray
@@ -2801,8 +2805,8 @@ GoTo:EOF
 	echo %$SEARCH_TYPE% DN: %%N >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%~N)" -attr description %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo LastLogonTimestamp: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%~N)" -attr lastLogonTimestamp %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_$lastLogonTimestamp.txt"
-	FOR /F "skip=1 delims=" %%P IN (%$LogPath%\var\var_$lastLogonTimestamp.txt) DO w32tm.exe /ntte %%P >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%~N)" -attr lastLogonTimestamp %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_$lastLogonTimestamp.txt"
+	FOR /F "skip=1 delims=" %%P IN (%$LogPath%\cache\var_$lastLogonTimestamp.txt) DO w32tm.exe /ntte %%P >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	DSGET computer %%N -disabled -s %$DC%.%$DOMAIN% %$DOMAIN_CREDENTIALS% 2> nul >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	dsget computer %%N -loc -s %$DC%.%$DOMAIN% %$DOMAIN_CREDENTIALS% 2> nul >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo MemberOf: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -2898,19 +2902,19 @@ GoTo:EOF
 	:: Check for sorted
 	if %$SORTED% EQU 1 GoTo jumpSCOSS
 	:: Unsorted
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name=%$SEARCH_KEY_PC_NAME%)(operatingSystem=%$SEARCH_OS%)(operatingSystemVersion=%$SEARCH_OSV%)(operatingSystemServicePack=%$SEARCH_OSSP%))" -attr name distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_N_DN.txt"
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name=%$SEARCH_KEY_PC_NAME%)(operatingSystem=%$SEARCH_OS%)(operatingSystemVersion=%$SEARCH_OSV%)(operatingSystemServicePack=%$SEARCH_OSSP%))" -attr distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name=%$SEARCH_KEY_PC_NAME%)(operatingSystem=%$SEARCH_OS%)(operatingSystemVersion=%$SEARCH_OSV%)(operatingSystemServicePack=%$SEARCH_OSSP%))" -attr name distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name=%$SEARCH_KEY_PC_NAME%)(operatingSystem=%$SEARCH_OS%)(operatingSystemVersion=%$SEARCH_OSV%)(operatingSystemServicePack=%$SEARCH_OSSP%))" -attr distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_DN.txt"
 	GoTo skipSCOSS
 :jumpSCOSS
 	:: Sorted
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name=%$SEARCH_KEY_PC_NAME%)(operatingSystem=%$SEARCH_OS%)(operatingSystemVersion=%$SEARCH_OSV%)(operatingSystemServicePack=%$SEARCH_OSSP%))" -attr name distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_N_DN.txt"
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name=%$SEARCH_KEY_PC_NAME%)(operatingSystem=%$SEARCH_OS%)(operatingSystemVersion=%$SEARCH_OSV%)(operatingSystemServicePack=%$SEARCH_OSSP%))" -attr distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name=%$SEARCH_KEY_PC_NAME%)(operatingSystem=%$SEARCH_OS%)(operatingSystemVersion=%$SEARCH_OSV%)(operatingSystemServicePack=%$SEARCH_OSSP%))" -attr name distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name=%$SEARCH_KEY_PC_NAME%)(operatingSystem=%$SEARCH_OS%)(operatingSystemVersion=%$SEARCH_OSV%)(operatingSystemServicePack=%$SEARCH_OSSP%))" -attr distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_DN.txt"
 :skipSCOSS
 	:: Check results
-	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\cache\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\cache\var_Last_Search_Count.txt"
 	:: remove leading space
-	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\var\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\var\var_Last_Search_Count.txt"
-	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\cache\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\cache\var_Last_Search_Count.txt"
+	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\cache\var_Last_Search_Count.txt"
 	call :SM
 	IF %$LAST_SEARCH_COUNT% EQU 0 (
 		echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -2925,11 +2929,11 @@ GoTo:EOF
 	echo Number of search results: %$LAST_SEARCH_COUNT%
 	@powershell Write-Host "Processing..." -ForegroundColor DarkYellow
 	:: Munge DN file
-	IF EXIST "%$LogPath%\var\var_Last_Search_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_DN_munge.txt"
-	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_DN_munge.txt"
-	type "%$LogPath%\var\var_Last_Search_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_DN.txt"
+	IF EXIST "%$LogPath%\cache\var_Last_Search_DN_munge.txt" DEL /Q /F "%$LogPath%\cache\var_Last_Search_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\cache\var_Last_Search_DN.txt"') DO echo %%M >> "%$LogPath%\cache\var_Last_Search_DN_munge.txt"
+	type "%$LogPath%\cache\var_Last_Search_DN_munge.txt" > "%$LogPath%\cache\var_Last_Search_DN.txt"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	type "%$LogPath%\var\var_Last_Search_N_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	type "%$LogPath%\cache\var_Last_Search_N_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	IF %$SUPPRESS_VERBOSE% EQU 1 GoTo jumpSCOSO
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -2937,7 +2941,7 @@ GoTo:EOF
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Detailed Output
-	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
+	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\cache\var_Last_Search_DN.txt") DO (
 	call :SM
 	@powershell Write-Host "Processing verbose..." -ForegroundColor DarkYellow
 	@powershell Write-Host '%%N' -ForegroundColor DarkGray
@@ -2945,8 +2949,8 @@ GoTo:EOF
 	echo %$SEARCH_TYPE% DN: %%N >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%~N)" -attr description %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo LastLogonTimestamp: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%~N)" -attr lastLogonTimestamp %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_$lastLogonTimestamp.txt"
-	FOR /F "skip=1 delims=" %%P IN (%$LogPath%\var\var_$lastLogonTimestamp.txt) DO w32tm.exe /ntte %%P >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%~N)" -attr lastLogonTimestamp %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_$lastLogonTimestamp.txt"
+	FOR /F "skip=1 delims=" %%P IN (%$LogPath%\cache\var_$lastLogonTimestamp.txt) DO w32tm.exe /ntte %%P >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	DSGET computer %%N -disabled -s %$DC%.%$DOMAIN% %$DOMAIN_CREDENTIALS% 2> nul >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	dsget computer %%N -loc -s %$DC%.%$DOMAIN% %$DOMAIN_CREDENTIALS% 2> nul >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo MemberOf: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -3032,8 +3036,8 @@ GoTo:EOF
 		:: Convert NT time
 	IF "%$SEARCH_LASTLOGONTIMESTAMP%"=="*" SET $NT_TIME_CONVERTED=*
 	IF "%$NT_TIME_CONVERTED%"=="*" GoTo skipLLTSC
-	FOR /F "tokens=2 delims=-" %%P IN ('w32tm.exe /ntte %$SEARCH_LASTLOGONTIMESTAMP%') DO echo %%P> "%$LogPath%\var\var_$NT_TIME_CONVERTED.txt"
-	SET /P $NT_TIME_CONVERTED= < "%$LogPath%\var\var_$NT_TIME_CONVERTED.txt"
+	FOR /F "tokens=2 delims=-" %%P IN ('w32tm.exe /ntte %$SEARCH_LASTLOGONTIMESTAMP%') DO echo %%P> "%$LogPath%\cache\var_$NT_TIME_CONVERTED.txt"
+	SET /P $NT_TIME_CONVERTED= < "%$LogPath%\cache\var_$NT_TIME_CONVERTED.txt"
 :skipLLTSC
 	@powershell Write-Host "Search parameters:" -ForegroundColor Gray
 	echo Attribute		Operator  Search Key
@@ -3066,23 +3070,23 @@ GoTo:EOF
 	:: Check for sorted
 	if %$SORTED% EQU 1 GoTo jumpSCTSS
 	:: Unsorted
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name=%$SEARCH_KEY_PC_NAME%)(whenCreated%$ATTR_WHENCREATED_OPERATOR%%$SEARCH_WHENCREATED%)(whenChanged%$ATTR_WHENCHANGED_OPERATOR%%$SEARCH_WHENCHANGED%)(lastLogonTimestamp%$ATTR_LASTLOGONTIMESTAMP_OPERATOR%%$SEARCH_LASTLOGONTIMESTAMP%))" -attr name distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_N_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name=%$SEARCH_KEY_PC_NAME%)(whenCreated%$ATTR_WHENCREATED_OPERATOR%%$SEARCH_WHENCREATED%)(whenChanged%$ATTR_WHENCHANGED_OPERATOR%%$SEARCH_WHENCHANGED%)(lastLogonTimestamp%$ATTR_LASTLOGONTIMESTAMP_OPERATOR%%$SEARCH_LASTLOGONTIMESTAMP%))" -attr name distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
 
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name=%$SEARCH_KEY_PC_NAME%)(whenCreated%$ATTR_WHENCREATED_OPERATOR%%$SEARCH_WHENCREATED%)(whenChanged%$ATTR_WHENCHANGED_OPERATOR%%$SEARCH_WHENCHANGED%)(lastLogonTimestamp%$ATTR_LASTLOGONTIMESTAMP_OPERATOR%%$SEARCH_LASTLOGONTIMESTAMP%))" -attr distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name=%$SEARCH_KEY_PC_NAME%)(whenCreated%$ATTR_WHENCREATED_OPERATOR%%$SEARCH_WHENCREATED%)(whenChanged%$ATTR_WHENCHANGED_OPERATOR%%$SEARCH_WHENCHANGED%)(lastLogonTimestamp%$ATTR_LASTLOGONTIMESTAMP_OPERATOR%%$SEARCH_LASTLOGONTIMESTAMP%))" -attr distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_DN.txt"
 GoTo skipSCTSS
 :jumpSCTSS
 	:: Sorted
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name=%$SEARCH_KEY_PC_NAME%)(whenCreated%$ATTR_WHENCREATED_OPERATOR%%$SEARCH_WHENCREATED%)(whenChanged%$ATTR_WHENCHANGED_OPERATOR%%$SEARCH_WHENCHANGED%)(lastLogonTimestamp%$ATTR_LASTLOGONTIMESTAMP_OPERATOR%%$SEARCH_LASTLOGONTIMESTAMP%))" -attr name distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_N_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name=%$SEARCH_KEY_PC_NAME%)(whenCreated%$ATTR_WHENCREATED_OPERATOR%%$SEARCH_WHENCREATED%)(whenChanged%$ATTR_WHENCHANGED_OPERATOR%%$SEARCH_WHENCHANGED%)(lastLogonTimestamp%$ATTR_LASTLOGONTIMESTAMP_OPERATOR%%$SEARCH_LASTLOGONTIMESTAMP%))" -attr name distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
 
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name=%$SEARCH_KEY_PC_NAME%)(whenCreated%$ATTR_WHENCREATED_OPERATOR%%$SEARCH_WHENCREATED%)(whenChanged%$ATTR_WHENCHANGED_OPERATOR%%$SEARCH_WHENCHANGED%)(lastLogonTimestamp%$ATTR_LASTLOGONTIMESTAMP_OPERATOR%%$SEARCH_LASTLOGONTIMESTAMP%))" -attr distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name=%$SEARCH_KEY_PC_NAME%)(whenCreated%$ATTR_WHENCREATED_OPERATOR%%$SEARCH_WHENCREATED%)(whenChanged%$ATTR_WHENCHANGED_OPERATOR%%$SEARCH_WHENCHANGED%)(lastLogonTimestamp%$ATTR_LASTLOGONTIMESTAMP_OPERATOR%%$SEARCH_LASTLOGONTIMESTAMP%))" -attr distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_DN.txt"
 
 :skipSCTSS
 
 	:: Check results
-	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\cache\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\cache\var_Last_Search_Count.txt"
 	:: remove leading space
-	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\var\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\var\var_Last_Search_Count.txt"
-	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\cache\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\cache\var_Last_Search_Count.txt"
+	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\cache\var_Last_Search_Count.txt"
 	call :SM
 	IF %$LAST_SEARCH_COUNT% EQU 0 (
 		echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -3097,11 +3101,11 @@ GoTo skipSCTSS
 	echo Number of search results: %$LAST_SEARCH_COUNT%
 	@powershell Write-Host "Processing..." -ForegroundColor DarkYellow
 	:: Munge DN file
-	IF EXIST "%$LogPath%\var\var_Last_Search_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_DN_munge.txt"
-	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_DN_munge.txt"
-	type "%$LogPath%\var\var_Last_Search_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_DN.txt"
+	IF EXIST "%$LogPath%\cache\var_Last_Search_DN_munge.txt" DEL /Q /F "%$LogPath%\cache\var_Last_Search_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\cache\var_Last_Search_DN.txt"') DO echo %%M >> "%$LogPath%\cache\var_Last_Search_DN_munge.txt"
+	type "%$LogPath%\cache\var_Last_Search_DN_munge.txt" > "%$LogPath%\cache\var_Last_Search_DN.txt"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	type "%$LogPath%\var\var_Last_Search_N_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	type "%$LogPath%\cache\var_Last_Search_N_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	IF %$SUPPRESS_VERBOSE% EQU 1 GoTo jumpSCTSO
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -3109,7 +3113,7 @@ GoTo skipSCTSS
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Detailed Output
-	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
+	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\cache\var_Last_Search_DN.txt") DO (
 	call :SM
 	@powershell Write-Host "Processing verbose..." -ForegroundColor DarkYellow
 	@powershell Write-Host '%%N' -ForegroundColor DarkGray
@@ -3117,8 +3121,8 @@ GoTo skipSCTSS
 	echo %$SEARCH_TYPE% DN: %%N >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%~N)" -attr description %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo LastLogonTimestamp: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%~N)" -attr lastLogonTimestamp %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_$lastLogonTimestamp.txt"
-	FOR /F "skip=1 delims=" %%P IN (%$LogPath%\var\var_$lastLogonTimestamp.txt) DO w32tm.exe /ntte %%P >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%~N)" -attr lastLogonTimestamp %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_$lastLogonTimestamp.txt"
+	FOR /F "skip=1 delims=" %%P IN (%$LogPath%\cache\var_$lastLogonTimestamp.txt) DO w32tm.exe /ntte %%P >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	DSGET computer %%N -disabled -s %$DC%.%$DOMAIN% %$DOMAIN_CREDENTIALS% 2> nul >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	dsget computer %%N -loc -s %$DC%.%$DOMAIN% %$DOMAIN_CREDENTIALS% 2> nul >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo MemberOf: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -3209,25 +3213,25 @@ GoTo skipSCTSS
 		:: Check for sorted
 	if %$SORTED% EQU 1 GoTo jumpSCLCS
 	:: Unsorted
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name=%$SEARCH_KEY_PC_NAME%)(logonCount%$ATTR_LOGONCOUNT_OPERATOR%%$SEARCH_LOGONCOUNT%))" -attr name distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_N_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name=%$SEARCH_KEY_PC_NAME%)(logonCount%$ATTR_LOGONCOUNT_OPERATOR%%$SEARCH_LOGONCOUNT%))" -attr name distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
 
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name=%$SEARCH_KEY_PC_NAME%)(logonCount%$ATTR_LOGONCOUNT_OPERATOR%%$SEARCH_LOGONCOUNT%))" -attr distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name=%$SEARCH_KEY_PC_NAME%)(logonCount%$ATTR_LOGONCOUNT_OPERATOR%%$SEARCH_LOGONCOUNT%))" -attr distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_DN.txt"
 
 	GoTo skipSCLCS
 
  :jumpSCLCS
 	:: Sorted
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name=%$SEARCH_KEY_PC_NAME%)(logonCount%$ATTR_LOGONCOUNT_OPERATOR%%$SEARCH_LOGONCOUNT%))" -attr name distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_N_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name=%$SEARCH_KEY_PC_NAME%)(logonCount%$ATTR_LOGONCOUNT_OPERATOR%%$SEARCH_LOGONCOUNT%))" -attr name distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
 
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name=%$SEARCH_KEY_PC_NAME%)(logonCount%$ATTR_LOGONCOUNT_OPERATOR%%$SEARCH_LOGONCOUNT%))" -attr distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "(&(objectClass=computer)(name=%$SEARCH_KEY_PC_NAME%)(logonCount%$ATTR_LOGONCOUNT_OPERATOR%%$SEARCH_LOGONCOUNT%))" -attr distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_DN.txt"
 
 :skipSCLCS
 
 	:: Check results
-	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\cache\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\cache\var_Last_Search_Count.txt"
 	:: remove leading space
-	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\var\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\var\var_Last_Search_Count.txt"
-	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\cache\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\cache\var_Last_Search_Count.txt"
+	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\cache\var_Last_Search_Count.txt"
 	call :SM
 	IF %$LAST_SEARCH_COUNT% EQU 0 (
 		echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -3242,11 +3246,11 @@ GoTo skipSCTSS
 	echo Number of search results: %$LAST_SEARCH_COUNT%
 	@powershell Write-Host "Processing..." -ForegroundColor DarkYellow
 	:: Munge DN file
-	IF EXIST "%$LogPath%\var\var_Last_Search_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_DN_munge.txt"
-	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_DN_munge.txt"
-	type "%$LogPath%\var\var_Last_Search_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_DN.txt"
+	IF EXIST "%$LogPath%\cache\var_Last_Search_DN_munge.txt" DEL /Q /F "%$LogPath%\cache\var_Last_Search_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\cache\var_Last_Search_DN.txt"') DO echo %%M >> "%$LogPath%\cache\var_Last_Search_DN_munge.txt"
+	type "%$LogPath%\cache\var_Last_Search_DN_munge.txt" > "%$LogPath%\cache\var_Last_Search_DN.txt"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	type "%$LogPath%\var\var_Last_Search_N_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	type "%$LogPath%\cache\var_Last_Search_N_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	IF %$SUPPRESS_VERBOSE% EQU 1 GoTo jumpSCLCO
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -3254,7 +3258,7 @@ GoTo skipSCTSS
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Detailed Output
-	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
+	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\cache\var_Last_Search_DN.txt") DO (
 	call :SM
 	@powershell Write-Host "Processing verbose..." -ForegroundColor DarkYellow
 	@powershell Write-Host '%%N' -ForegroundColor DarkGray
@@ -3262,8 +3266,8 @@ GoTo skipSCTSS
 	echo %$SEARCH_TYPE% DN: %%N >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%~N)" -attr description %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo LastLogonTimestamp: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%~N)" -attr lastLogonTimestamp %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_$lastLogonTimestamp.txt"
-	FOR /F "skip=1 delims=" %%P IN (%$LogPath%\var\var_$lastLogonTimestamp.txt) DO w32tm.exe /ntte %%P >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%~N)" -attr lastLogonTimestamp %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_$lastLogonTimestamp.txt"
+	FOR /F "skip=1 delims=" %%P IN (%$LogPath%\cache\var_$lastLogonTimestamp.txt) DO w32tm.exe /ntte %%P >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	DSGET computer %%N -disabled -s %$DC%.%$DOMAIN% %$DOMAIN_CREDENTIALS% 2> nul >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	dsget computer %%N -loc -s %$DC%.%$DOMAIN% %$DOMAIN_CREDENTIALS% 2> nul >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo MemberOf: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -3437,20 +3441,20 @@ GoTo skipSCTSS
 		:: Check for sorted
 	if %$SORTED% EQU 1 GoTo jumpSCMAS
 	:: Unsorted
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "%$FILTER%" -attr name distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_N_DN.txt"
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "%$FILTER%" -attr distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "%$FILTER%" -attr name distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "%$FILTER%" -attr distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_DN.txt"
 GoTo skipSCMAS
 :jumpSCMAS
 	:: Sorted
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "%$FILTER%" -attr name distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_N_DN.txt"
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "%$FILTER%" -attr distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "%$FILTER%" -attr name distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "%$FILTER%" -attr distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_DN.txt"
 :skipSCMAS
 
 	:: Check results
-	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\cache\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\cache\var_Last_Search_Count.txt"
 	:: remove leading space
-	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\var\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\var\var_Last_Search_Count.txt"
-	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\cache\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\cache\var_Last_Search_Count.txt"
+	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\cache\var_Last_Search_Count.txt"
 	call :SM
 	IF %$LAST_SEARCH_COUNT% EQU 0 (
 		echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -3465,16 +3469,16 @@ GoTo skipSCMAS
 	echo Number of search results: %$LAST_SEARCH_COUNT%
 	@powershell Write-Host "Processing..." -ForegroundColor DarkYellow
 	:: Munge DN file
-	IF EXIST "%$LogPath%\var\var_Last_Search_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_DN_munge.txt"
-	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_DN_munge.txt"
-	type "%$LogPath%\var\var_Last_Search_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_DN.txt"
+	IF EXIST "%$LogPath%\cache\var_Last_Search_DN_munge.txt" DEL /Q /F "%$LogPath%\cache\var_Last_Search_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\cache\var_Last_Search_DN.txt"') DO echo %%M >> "%$LogPath%\cache\var_Last_Search_DN_munge.txt"
+	type "%$LogPath%\cache\var_Last_Search_DN_munge.txt" > "%$LogPath%\cache\var_Last_Search_DN.txt"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Munge N_DN file
-	IF EXIST "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
-	FOR /F "skip=2 delims=" %%M IN ('FIND /I "distinguishedName" "%$LogPath%\var\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
-	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
-	type "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_N_DN.txt"
-	type "%$LogPath%\var\var_Last_Search_N_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	IF EXIST "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt" DEL /Q /F "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I "distinguishedName" "%$LogPath%\cache\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\cache\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt"
+	type "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt" > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
+	type "%$LogPath%\cache\var_Last_Search_N_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	IF %$SUPPRESS_VERBOSE% EQU 1 GoTo jumpSCMAO
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -3482,7 +3486,7 @@ GoTo skipSCMAS
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Detailed Output
-	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
+	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\cache\var_Last_Search_DN.txt") DO (
 	call :SM
 	@powershell Write-Host "Processing verbose..." -ForegroundColor DarkYellow
 	@powershell Write-Host '%%N' -ForegroundColor DarkGray
@@ -3490,8 +3494,8 @@ GoTo skipSCMAS
 	echo %$SEARCH_TYPE% DN: %%N >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%~N)" -attr description %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo LastLogonTimestamp: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%~N)" -attr lastLogonTimestamp %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_$lastLogonTimestamp.txt"
-	FOR /F "skip=1 delims=" %%P IN (%$LogPath%\var\var_$lastLogonTimestamp.txt) DO w32tm.exe /ntte %%P >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%~N)" -attr lastLogonTimestamp %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_$lastLogonTimestamp.txt"
+	FOR /F "skip=1 delims=" %%P IN (%$LogPath%\cache\var_$lastLogonTimestamp.txt) DO w32tm.exe /ntte %%P >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	DSGET computer %%N -disabled -s %$DC%.%$DOMAIN% %$DOMAIN_CREDENTIALS% 2> nul >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	dsget computer %%N -loc -s %$DC%.%$DOMAIN% %$DOMAIN_CREDENTIALS% 2> nul >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo MemberOf: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -3551,7 +3555,7 @@ GoTo skipSCMAS
 	call :sHeader
 	:: Check on Wildcard *
 	IF "%$SEARCH_KEY%"=="*" (SET $SERVER_SEARCH_GLOBAL=1) ELSE (SET $SERVER_SEARCH_GLOBAL=0)
-	echo %$SERVER_SEARCH_GLOBAL% > "%$LogPath%\var\var_$SERVER_SEARCH_GLOBAL.txt"
+	echo %$SERVER_SEARCH_GLOBAL% > "%$LogPath%\cache\var_$SERVER_SEARCH_GLOBAL.txt"
 	:: Credentials
 	:: Domain credentials default to blank
 	SET $DOMAIN_CREDENTIALS=
@@ -3566,21 +3570,21 @@ GoTo skipSCMAS
 		:: Check for sorted
 	if %$SORTED% EQU 1 GoTo jumpSSS
 	:: Unsorted
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=server)(name=%$SEARCH_KEY%))" -attr name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_N_DN.txt"
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=server)(name=%$SEARCH_KEY%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=server)(name=%$SEARCH_KEY%))" -attr name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=server)(name=%$SEARCH_KEY%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_DN.txt"
 GoTo skipSSS
 :jumpSSS
 	:: Sorted
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=server)(name=%$SEARCH_KEY%))" -attr name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_N_DN.txt"
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=server)(name=%$SEARCH_KEY%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=server)(name=%$SEARCH_KEY%))" -attr name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=server)(name=%$SEARCH_KEY%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_DN.txt"
 
 :skipSSS
 
 	:: Check results
-	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\cache\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\cache\var_Last_Search_Count.txt"
 	:: remove leading space
-	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\var\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\var\var_Last_Search_Count.txt"
-	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\cache\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\cache\var_Last_Search_Count.txt"
+	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\cache\var_Last_Search_Count.txt"
 	call :SM
 	IF %$LAST_SEARCH_COUNT% EQU 0 (
 		echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -3595,15 +3599,15 @@ GoTo skipSSS
 	@powershell Write-Host "Processing..." -ForegroundColor DarkYellow
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Munge N_DN file
-	IF EXIST "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
-	FOR /F "skip=2 delims=" %%M IN ('FIND /I "distinguishedName" "%$LogPath%\var\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
-	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
-	type "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_N_DN.txt"
-	type "%$LogPath%\var\var_Last_Search_N_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"	
+	IF EXIST "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt" DEL /Q /F "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I "distinguishedName" "%$LogPath%\cache\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\cache\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt"
+	type "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt" > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
+	type "%$LogPath%\cache\var_Last_Search_N_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"	
 	:: Munge DN file
-	IF EXIST "%$LogPath%\var\var_Last_Search_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_DN_munge.txt"
-	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_DN_munge.txt"
-	type "%$LogPath%\var\var_Last_Search_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_DN.txt"
+	IF EXIST "%$LogPath%\cache\var_Last_Search_DN_munge.txt" DEL /Q /F "%$LogPath%\cache\var_Last_Search_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\cache\var_Last_Search_DN.txt"') DO echo %%M >> "%$LogPath%\cache\var_Last_Search_DN_munge.txt"
+	type "%$LogPath%\cache\var_Last_Search_DN_munge.txt" > "%$LogPath%\cache\var_Last_Search_DN.txt"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	IF %$SUPPRESS_VERBOSE% EQU 1 GoTo jumpSSO
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -3611,7 +3615,7 @@ GoTo skipSSS
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Detailed Output
-	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
+	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\cache\var_Last_Search_DN.txt") DO (
 	call :SM
 	@powershell Write-Host "Processing verbose..." -ForegroundColor DarkYellow
 	@powershell Write-Host '%%N' -ForegroundColor DarkGray
@@ -3658,10 +3662,10 @@ GoTo skipSSS
 	call :LSLCN
 	call :SM
 	:: Console output
-	@powershell Write-Host "Attribute: name" -ForegroundColor Blue
+	@powershell Write-Host "Attribute: name" -ForegroundColor DarkBlue
 	@powershell Write-Host "Can use * wildcard for search." -ForegroundColor Gray
-	@powershell Write-Host "If left blank, will default to * wildcard" -ForegroundColor Magenta
-	@powershell Write-Host "Tpye abort to exit" -ForegroundColor Magenta
+	@powershell Write-Host "If left blank, will default to * wildcard" -ForegroundColor DarkMagenta
+	@powershell Write-Host "Tpye abort to exit" -ForegroundColor White
 	set $SEARCH_KEY=*
 	SET /P $SEARCH_KEY=%$SEARCH_TYPE% %$SEARCH_ATTRIBUTE% search key:
 	IF /I %$SEARCH_KEY%==abort GoTo Search
@@ -3674,7 +3678,7 @@ GoTo skipSSS
 	call :sHeader
 	:: Check on Wildcard *
 	IF "%$SEARCH_KEY%"=="*" (SET $SERVER_SEARCH_GLOBAL=1) ELSE (SET $SERVER_SEARCH_GLOBAL=0)
-	echo %$SERVER_SEARCH_GLOBAL% > "%$LogPath%\var\var_$SERVER_SEARCH_GLOBAL.txt"
+	echo %$SERVER_SEARCH_GLOBAL% > "%$LogPath%\cache\var_$SERVER_SEARCH_GLOBAL.txt"
 	:: Credentials
 	:: Domain credentials default to blank
 	SET $DOMAIN_CREDENTIALS=
@@ -3689,21 +3693,21 @@ GoTo skipSSS
 		:: Check for sorted
 	if %$SORTED% EQU 1 GoTo jumpSOUS
 	:: Unsorted
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=organizationalUnit)(name=%$SEARCH_KEY%))" -attr name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_N_DN.txt"
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=organizationalUnit)(name=%$SEARCH_KEY%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=organizationalUnit)(name=%$SEARCH_KEY%))" -attr name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=organizationalUnit)(name=%$SEARCH_KEY%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_DN.txt"
 	GoTo skipSOUS
 :jumpSOUS
 	:: Sorted
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=organizationalUnit)(name=%$SEARCH_KEY%))" -attr name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_N_DN.txt"
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=organizationalUnit)(name=%$SEARCH_KEY%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=organizationalUnit)(name=%$SEARCH_KEY%))" -attr name distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(&(objectClass=organizationalUnit)(name=%$SEARCH_KEY%))" -attr distinguishedName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_DN.txt"
 
 :skipSOUS
 
 	:: Check results
-	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\cache\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\cache\var_Last_Search_Count.txt"
 	:: remove leading space
-	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\var\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\var\var_Last_Search_Count.txt"
-	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\cache\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\cache\var_Last_Search_Count.txt"
+	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\cache\var_Last_Search_Count.txt"
 	call :SM
 	IF %$LAST_SEARCH_COUNT% EQU 0 (
 		echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -3712,21 +3716,25 @@ GoTo skipSSS
 		@powershell Write-Host "Nothing found! Try again with broader wildcard" -ForegroundColor Red
 		GoTo skipSOU
 	)
+	:: Capture OU DN
+	::	Also removes any spaces from path
+	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\cache\var_Last_Search_DN.txt) DO SET $OU_CUSTOM_SEARCH=%%P
+	
 	:: Main output
 	echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Number of search results: %$LAST_SEARCH_COUNT%
 	@powershell Write-Host "Processing..." -ForegroundColor DarkYellow
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Munge N_DN file
-	IF EXIST "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
-	FOR /F "skip=2 delims=" %%M IN ('FIND /I "distinguishedName" "%$LogPath%\var\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
-	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
-	type "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_N_DN.txt"
-	type "%$LogPath%\var\var_Last_Search_N_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"	
+	IF EXIST "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt" DEL /Q /F "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I "distinguishedName" "%$LogPath%\cache\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\cache\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt"
+	type "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt" > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
+	type "%$LogPath%\cache\var_Last_Search_N_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"	
 	:: Munge DN file
-	IF EXIST "%$LogPath%\var\var_Last_Search_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_DN_munge.txt"
-	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_DN_munge.txt"
-	type "%$LogPath%\var\var_Last_Search_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_DN.txt"
+	IF EXIST "%$LogPath%\cache\var_Last_Search_DN_munge.txt" DEL /Q /F "%$LogPath%\cache\var_Last_Search_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\cache\var_Last_Search_DN.txt"') DO echo %%M >> "%$LogPath%\cache\var_Last_Search_DN_munge.txt"
+	type "%$LogPath%\cache\var_Last_Search_DN_munge.txt" > "%$LogPath%\cache\var_Last_Search_DN.txt"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	IF %$SUPPRESS_VERBOSE% EQU 1 GoTo jumpSOUO
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -3734,10 +3742,10 @@ GoTo skipSSS
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Detailed Output
-	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
+	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\cache\var_Last_Search_DN.txt") DO (
 	call :SM
 	@powershell Write-Host "Processing verbose..." -ForegroundColor DarkYellow
-	@powershell Write-Host '%%N' -ForegroundColor DarkGray
+	@powershell Write-Host '%%N' -ForegroundColor Black
 	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%~N)" -attr name description %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo %$SEARCH_TYPE% DN: %%N >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"	
@@ -3767,10 +3775,12 @@ GoTo skipSSS
 	echo What to do next?
 	echo	[1] Set OU as AD Base search?
 	echo	[2] Search OU again?
-	echo	[3] Go back to search menu?
+	echo	[3] Go back to settings?
+	echo	[4] Go back to search menu?
 	echo.
-	Choice /c 123 /m "Select:"
-	IF %ERRORLEVEL% EQU 3 GoTo Search
+	Choice /c 1234 /m "Select:"
+	IF %ERRORLEVEL% EQU 4 GoTo Search
+	IF %ERRORLEVEL% EQU 3 GoTo uSet
 	IF %ERRORLEVEL% EQU 2 GoTo SOU
 	IF %ERRORLEVEL% EQU 1 GoTo subADB
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -3858,9 +3868,9 @@ GoTo skipSSS
 	Echo If no change is desired,
 	Echo just hit enter and leave blank.
 	Echo.
-	echo %$LOGPATH%> "%$LOGPATH%\var\var_$LOGPATH.txt"
-	echo %$SESSION_LOG%> "%$LOGPATH%\var\var_$SESSION_LOG.txt"
-	echo %$kpLog%> "%$LOGPATH%\var\var_$kpLog.txt"
+	echo %$LOGPATH%> "%$LOGPATH%\cache\var_$LOGPATH.txt"
+	echo %$SESSION_LOG%> "%$LOGPATH%\cache\var_$SESSION_LOG.txt"
+	echo %$kpLog%> "%$LOGPATH%\cache\var_$kpLog.txt"
 	SET /p $LOGPATH=Log Path:
 	echo.
 	Echo ^("Yes" or "No"^)
@@ -3869,10 +3879,10 @@ GoTo skipSSS
 	echo %$kpLog% | FIND /I "N" && SET $kpLog=No
 	IF /I NOT "%$kpLog%"=="Yes" SET /A $CHECK_KPLOG+=1
 	IF /I NOT "%$kpLog%"=="No" SET /A $CHECK_KPLOG+=1
-	IF %$CHECK_KPLOG% EQU 2 SET /P $kpLog= < "%$LOGPATH%\var\var_$kpLog.txt"
+	IF %$CHECK_KPLOG% EQU 2 SET /P $kpLog= < "%$LOGPATH%\cache\var_$kpLog.txt"
 	:: ERROR CHECKING
 	IF NOT EXIST %$LogPath% mkdir %$LogPath% || Echo Log path not valid and/or file name not valid. Back to default!
-	IF NOT EXIST %$LogPath% SET /P $LogPath= < "%$LOGPATH%\var\var_$LOGPATH.txt"
+	IF NOT EXIST %$LogPath% SET /P $LogPath= < "%$LOGPATH%\cache\var_$LOGPATH.txt"
 	Echo Close ALL open logs?
 	choice /c YN /m "[y]es, [n]o?"
 	If ERRORLevel 2 GoTo skipCL
@@ -3941,37 +3951,37 @@ SET "$DC_TAG=DS Settings"
 	Echo If no change is desired,
 	Echo just hit enter and leave blank.
 	echo.
-	echo %$DOMAIN_USER%> "%$LOGPATH%\var\var_$DOMAIN_USER.txt"
-	IF DEFINED $cUSERPASSWORD echo %$cUSERPASSWORD%> "%$LOGPATH%\var\var_$cUSERPASSWORD.txt"
+	echo %$DOMAIN_USER%> "%$LOGPATH%\cache\var_$DOMAIN_USER.txt"
+	IF DEFINED $cUSERPASSWORD echo %$cUSERPASSWORD%> "%$LOGPATH%\cache\var_$cUSERPASSWORD.txt"
 	echo Provide Credentials ^(searches Name ^& UPN^)
 	@powershell Write-Host "Leave password blank to abort!" -ForegroundColor Cyan
 	SET $cUSERPASSWORD=
 	SET /P $DOMAIN_USER=UserName:
 	SET /P $cUSERPASSWORD=Password:
 	IF NOT DEFINED $cUSERPASSWORD (
-		SET /P $cUSERPASSWORD= <  "%$LOGPATH%\var\var_$cUSERPASSWORD.txt"
-		DEL /F /Q "%$LOGPATH%\var\var_$cUSERPASSWORD.txt"
+		SET /P $cUSERPASSWORD= <  "%$LOGPATH%\cache\var_$cUSERPASSWORD.txt"
+		DEL /F /Q "%$LOGPATH%\cache\var_$cUSERPASSWORD.txt"
 		GoTo uSetDC
 	)
 	:: Using name search
-	dsquery user forestroot -o rdn -scope subtree -domain %$domain% -name "%$DOMAIN_USER%" -u %$DOMAIN_USER% -p %$cUSERPASSWORD% -limit %$sLimit% -uc 2> nul 1> "%$LOGPATH%\var\var_Custom_User_Domain_Authentication.txt"
+	dsquery user forestroot -o rdn -scope subtree -domain %$domain% -name "%$DOMAIN_USER%" -u %$DOMAIN_USER% -p %$cUSERPASSWORD% -limit %$sLimit% -uc 2> nul 1> "%$LOGPATH%\cache\var_Custom_User_Domain_Authentication.txt"
 	::	mainly to capture authentication faliure
 	SET $DA_QUERY_RESULT=%ERRORLEVEL%
 	IF NOT DEFINED $DA_QUERY_RESULT SET $DA_QUERY_RESULT=0
-	echo %$DA_QUERY_RESULT% > "%$LOGPATH%\var\var_$DA_QUERY_RESULT.txt"
+	echo %$DA_QUERY_RESULT% > "%$LOGPATH%\cache\var_$DA_QUERY_RESULT.txt"
 	:: skip if name search succeded
 	IF %$DA_QUERY_RESULT% EQU 0 GoTo skipDAupn
 	:: Check UPN search
-	IF %$DA_QUERY_RESULT% NEQ 0 dsquery user forestroot -o rdn -scope subtree -domain %$domain% -UPN "%$DOMAIN_USER%*" -u %$DOMAIN_USER% -p %$cUSERPASSWORD% -limit %$sLimit% -uc 2> nul 1> "%$LOGPATH%\var\var_Custom_User_Domain_Authentication.txt"
+	IF %$DA_QUERY_RESULT% NEQ 0 dsquery user forestroot -o rdn -scope subtree -domain %$domain% -UPN "%$DOMAIN_USER%*" -u %$DOMAIN_USER% -p %$cUSERPASSWORD% -limit %$sLimit% -uc 2> nul 1> "%$LOGPATH%\cache\var_Custom_User_Domain_Authentication.txt"
 	SET $DA_QUERY_RESULT=%ERRORLEVEL%
 	IF NOT DEFINED $DA_QUERY_RESULT SET $DA_QUERY_RESULT=0
-	echo %$DA_QUERY_RESULT% > "%$LOGPATH%\var\var_$DA_QUERY_RESULT.txt"
+	echo %$DA_QUERY_RESULT% > "%$LOGPATH%\cache\var_$DA_QUERY_RESULT.txt"
 :skipDAupn
 
 	::	Athentication error -2147023570
 	IF %$DA_QUERY_RESULT% EQU -2147023570 (
-		SET /P $DOMAIN_USER= < "%$LOGPATH%\var\var_$DOMAIN_USER.txt"
-		DEL /F /Q "%$LOGPATH%\var\var_$cUSERPASSWORD.txt"
+		SET /P $DOMAIN_USER= < "%$LOGPATH%\cache\var_$DOMAIN_USER.txt"
+		DEL /F /Q "%$LOGPATH%\cache\var_$cUSERPASSWORD.txt"
 		@powershell Write-Host "Authentication failed!" -ForegroundColor Red
 		echo.
 		@powershell Write-Host "Try again?" -ForegroundColor white
@@ -4000,17 +4010,17 @@ SET "$DC_TAG=DS Settings"
 	Echo ------------------------
 	Echo If no change is desired,
 	Echo just hit enter and leave blank.
-	echo %$DC%> "%$LOGPATH%\var\var_$DC.txt"
+	echo %$DC%> "%$LOGPATH%\cache\var_$DC.txt"
 	echo.
 	IF /I "%$SESSION_USER_STATUS%"=="local" IF NOT DEFINED $cUSERPASSWORD GoTo err30
 	echo Pick a Domain Controller to connect to
 	IF "%$SESSION_USER_STATUS%"=="domain" (dsquery server -o rdn -forest -domain %$domain% -name "*" -limit %$sLimit% -uc 2> nul) ELSE (
 		dsquery server -o rdn -forest -domain %$domain% -name "*" -u %$DOMAIN_USER% -p %$cUSERPASSWORD% -limit %$sLimit% -uc 2> nul
-		) > "%$LOGPATH%\var\var_Domain_Controller_List.txt"
-	type "%$LOGPATH%\var\var_Domain_Controller_List.txt"
+		) > "%$LOGPATH%\cache\var_Domain_Controller_List.txt"
+	type "%$LOGPATH%\cache\var_Domain_Controller_List.txt"
 	SET /P $DC=Domain Controller:
 	:: Validate input
-	FIND /I "%$DC%" "%$LOGPATH%\var\var_Domain_Controller_List.txt" 1> nul 2> nul
+	FIND /I "%$DC%" "%$LOGPATH%\cache\var_Domain_Controller_List.txt" 1> nul 2> nul
 	SET $DC_INPUT_CHECK=%ERRORLEVEL%
 	IF %$DC_INPUT_CHECK% NEQ 0 (
 		@powershell Write-Host "Not a valid DC!" -ForegroundColor Red) & (
@@ -4028,7 +4038,7 @@ SET "$DC_TAG=DS Settings"
 	SET $DC_CHECK=%ERRORLEVEL%
 	IF %$DC_CHECK% NEQ 0 SET $DC_CHECK=1
 	IF %$DC_CHECK% EQU 1 (
-		SET /P $DC= < "%$LOGPATH%\var\var_$DC.txt") & (
+		SET /P $DC= < "%$LOGPATH%\cache\var_$DC.txt") & (
 		echo DC is not responding! Choose another DC) & (
 		timeout /t 10) & (
 		GoTo subDC)
@@ -4057,12 +4067,12 @@ SET "$DC_TAG=DS Settings"
 	Echo ------------------------
 	Echo If no change is desired,
 	Echo just hit enter and leave blank.
-	echo %$DOMAIN%> "%$LOGPATH%\var\var_$DOMAIN.txt"
+	echo %$DOMAIN%> "%$LOGPATH%\cache\var_$DOMAIN.txt"
 	echo.
 	SET /P $DOMAIN=Domain:
 	(nslookup %$DOMAIN% 2> nul) | (FIND /I "NAME:")
 	SET $CHECK_DOMAIN=%ERRORLEVEL%
-	IF %$CHECK_DOMAIN% EQU 1 (SET /P $DOMAIN= < "%$LOGPATH%\var\var_$DOMAIN.txt")
+	IF %$CHECK_DOMAIN% EQU 1 (SET /P $DOMAIN= < "%$LOGPATH%\cache\var_$DOMAIN.txt")
 	IF %$CHECK_DOMAIN% EQU 1 (Echo Domain not found!) & (timeout /t 10) & (GoTo subDomain)
 	Echo Domain configured: %$DOMAIN%
 	echo Domain: %$DOMAIN% >> "%$LOGPATH%\ADDS_Tool_Active_Session.log"
@@ -4085,7 +4095,7 @@ SET "$DC_TAG=DS Settings"
 	Echo If no change is desired,
 	Echo just hit enter and leave blank.
 	Echo Can use "*" at end of string.
-	echo %$DSITE%> "%$LOGPATH%\var\var_$DSITE.txt"
+	echo %$DSITE%> "%$LOGPATH%\cache\var_$DSITE.txt"
 	echo.
 	IF %$DU% EQU 0 IF NOT DEFINED $cUSERPASSWORD GoTo err30
 	echo Choose a site
@@ -4100,7 +4110,7 @@ SET "$DC_TAG=DS Settings"
 		dsquery site -o rdn -domain %$domain% -name "%$DSITE%" -u %$DOMAIN_USER% -p %$cUSERPASSWORD% -limit %$sLimit% -uc | FIND /I """"
 		)
 	SET $DS_CHECK=%ERRORLEVEL%
-	IF %$DS_CHECK% NEQ 0 SET /P $DSITE= < "%$LOGPATH%\var\var_$DSITE.txt"
+	IF %$DS_CHECK% NEQ 0 SET /P $DSITE= < "%$LOGPATH%\cache\var_$DSITE.txt"
 	IF %$DS_CHECK% NEQ 0 Echo Not a valid site, reverted back to previous setting.
 	IF %$DS_CHECK% EQU 0 GoTo jumpDSS
 	echo Try to change Domain Site again?
@@ -4109,15 +4119,15 @@ SET "$DC_TAG=DS Settings"
 	IF %ERRORLEVEL% EQU 1 GoTo subDS
 	:jumpDSS
 	IF "%$SESSION_USER_STATUS%"=="domain" (
-		dsquery site -o rdn -domain %$domain% -name "%$DSITE%" -limit %$sLimit% -uc > "%$LOGPATH%\var\var_$DSITE_List.txt") ELSE (
-		dsquery site -o rdn -domain %$domain% -name "%$DSITE%" -u %$DOMAIN_USER% -p %$cUSERPASSWORD% -limit %$sLimit% -uc > "%$LOGPATH%\var\var_$DSITE_List.txt"
+		dsquery site -o rdn -domain %$domain% -name "%$DSITE%" -limit %$sLimit% -uc > "%$LOGPATH%\cache\var_$DSITE_List.txt") ELSE (
+		dsquery site -o rdn -domain %$domain% -name "%$DSITE%" -u %$DOMAIN_USER% -p %$cUSERPASSWORD% -limit %$sLimit% -uc > "%$LOGPATH%\cache\var_$DSITE_List.txt"
 		)
-	SET /P $DSITE_N= < "%$LOGPATH%\var\var_$DSITE_List.txt"
+	SET /P $DSITE_N= < "%$LOGPATH%\cache\var_$DSITE_List.txt"
 	::Will contain double quotes to remove
 	echo %$DSITE% | (FIND /I "*" 1> nul 2> nul) && (
 		FOR /F "usebackq delims=" %%P IN ('%$DSITE_N%') DO SET $DSITE_N=%%~P)
 	SET $DSITE=%$DSITE_N%
-	echo %$DSITE%> "%$LOGPATH%\var\var_$DSITE.txt"
+	echo %$DSITE%> "%$LOGPATH%\cache\var_$DSITE.txt"
 	Echo Success!
 	timeout /t 10
 	GoTo uSetDC
@@ -4142,8 +4152,8 @@ SET "$DC_TAG=DS Settings"
 	Echo  AD Scope: %$AD_SCOPE%
 	Echo ------------------------
 	echo.
-	Echo %$AD_BASE%> "%$LOGPATH%\var\var_AD_Base.txt"
-	Echo %$AD_SCOPE%> "%$LOGPATH%\var\var_AD_Scope.txt"
+	Echo %$AD_BASE%> "%$LOGPATH%\cache\var_AD_Base.txt"
+	Echo %$AD_SCOPE%> "%$LOGPATH%\cache\var_AD_Scope.txt"
 	Echo Select AD Base:
 	echo [1] domainroot
 	echo [2] forestroot
@@ -4161,7 +4171,7 @@ SET "$DC_TAG=DS Settings"
 	REM if string already contains double-quotes, string comparison in quotes will crash;
 	REM e.g. "%$AD_BASE%"=="forestroot" --^> ""string""=="forestroot"
 	echo %$AD_BASE% | (FIND /I "=" 2> nul) & SET $AD_BASE_CUSTOM=%ERRORLEVEL%
-	echo %$AD_BASE_CUSTOM% > "%$LOGPATH%\var\var_$AD_BASE_CUSTOM.txt"
+	echo %$AD_BASE_CUSTOM% > "%$LOGPATH%\cache\var_$AD_BASE_CUSTOM.txt"
 	if %$AD_BASE_CUSTOM% EQU 0 GoTo skipADC
 	:: Not a custom OU base
 	if /I "%$AD_BASE%"=="forestroot" (SET $AD_SCOPE=subtree) & (GoTo skipASS)
@@ -4185,7 +4195,7 @@ SET "$DC_TAG=DS Settings"
 	Echo ------------------------
 	echo.
 	echo Change AD Search settings?
-	Choice /c 12 /m "[y]es or [n]o":
+	Choice /c 12 /m "yes or no":
 	IF %ERRORLEVEL% EQU 2 GoTo Uset
 	IF %ERRORLEVEL% EQU 1 GoTo uSetADS
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -4211,8 +4221,12 @@ SET "$DC_TAG=DS Settings"
 	echo.
 	echo Change AD Base to OU:
 	echo format: OU=OU,DC=domain,DC=domainRoot
-	SET /P $OU_Base=
-	echo "%$OU_Base%">"%$LOGPATH%\var\var_OU_Base.txt"
+	@powershell Write-Host "Leave blank to accept last OU search." -ForegroundColor Black
+	IF DEFINED $OU_CUSTOM_SEARCH echo Last OU search: %$OU_CUSTOM_SEARCH%
+	SET $OU_BASE=
+	SET /P $OU_BASE="OU DN:"
+	IF NOT DEFINED $OU_BASE IF DEFINED $OU_CUSTOM_SEARCH SET $OU_BASE=%$OU_CUSTOM_SEARCH%
+	echo "%$OU_Base%">"%$LOGPATH%\cache\var_OU_Base.txt"
 	echo Checking OU...
 	DSQUERY OU "%$OU_Base%" 2> nul
 	SET $OU_BASE_ERROR=%ERRORLEVEL%
@@ -4221,7 +4235,7 @@ SET "$DC_TAG=DS Settings"
 		echo Not a valid OU!
 		GoTo skipADB
 		)
-	SET /P $AD_BASE= < "%$LOGPATH%\var\var_OU_Base.txt"
+	SET /P $AD_BASE= < "%$LOGPATH%\cache\var_OU_Base.txt"
 :skipADB
 	IF DEFINED $OU_Base GoTo skipOUB
 	Echo Try again to set OU?
@@ -4229,6 +4243,7 @@ SET "$DC_TAG=DS Settings"
 	IF %ERRORLEVEL% EQU 2 GoTo skipOUB
 	IF %ERRORLEVEL% EQU 1 GoTo subADB
 :skipOUB
+	echo.
 	echo AD_BASE changed to: %$OU_Base%
 	echo.
 	timeout /t 20
@@ -4256,7 +4271,7 @@ SET "$DC_TAG=DS Settings"
 	Echo ------------------------
 	echo.
 	::	Sorted
-	echo %$SORTED% > "%$LOGPATH%\var\var_$SORTED.txt"
+	echo %$SORTED% > "%$LOGPATH%\cache\var_$SORTED.txt"
 	echo Sorted search results?
 	echo.
 	echo [1] 1=On	{yes}
@@ -4267,7 +4282,7 @@ SET "$DC_TAG=DS Settings"
 	echo.
 	::	Suppress Verbose Output
 	::	Capture current setting
-	echo %$SUPPRESS_VERBOSE% > "%$LOGPATH%\var\var_$SUPPRESS_VERBOSE.txt"
+	echo %$SUPPRESS_VERBOSE% > "%$LOGPATH%\cache\var_$SUPPRESS_VERBOSE.txt"
 	echo Suppress Verbose output on search results:
 	echo.
 	echo [1] 1=On	{yes}
@@ -4324,7 +4339,7 @@ GoTo:EOF
 :::: Function Variable Debug ::::::::::::::::::::::::::::::::::::::::::::::::::
 :fVarD
 	
-	set | FINDSTR /B /C:"$" > "%$LOGPATH%\var\Variable_Debug_%$PID%.txt"
+	set | FINDSTR /B /C:"$" > "%$LOGPATH%\cache\Variable_Debug_%$PID%.txt"
 GoTo:EOF
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -4337,7 +4352,7 @@ GoTo:EOF
 ::	SET "$FILTER_N=^(objectClass^=%$SEARCH_TYPE%^)^(%$SEARCH_ATTRIBUT%^=%$SEARCH_KEY%^)"
 	SET "$FILTER=(&%$FILTER%)"
 ::	SET "$FILTER_N=^(^&%$FILTER%^)"
-::	echo %$FILTER%> "%$LogPath%\var\var_$FILTER.txt"
+::	echo %$FILTER%> "%$LogPath%\cache\var_$FILTER.txt"
 	:: Start Elapse Time
 	call :subSET
 	:: Write log headers
@@ -4355,19 +4370,19 @@ GoTo:EOF
 		:: Check for sorted
 	if %$SORTED% EQU 1 GoTo jumpSAUTOS
 	:: Unsorted
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "%$FILTER%" -attr name distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_N_DN.txt"
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "%$FILTER%" -attr distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\var\var_Last_Search_DN.txt"	
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "%$FILTER%" -attr name distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "%$FILTER%" -attr distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% > "%$LogPath%\cache\var_Last_Search_DN.txt"	
 	GoTo skipSAUTOS
 :jumpSAUTOS
 	:: Sorted
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "%$FILTER%" -attr name distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_N_DN.txt"
-	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "%$FILTER%" -attr distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\var\var_Last_Search_DN.txt"	
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "%$FILTER%" -attr name distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
+	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -filter "%$FILTER%" -attr distinguishedName -limit %$sLimit% %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% | sort > "%$LogPath%\cache\var_Last_Search_DN.txt"	
 :skipSAUTOS
 	:: Check results
-	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\cache\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\cache\var_Last_Search_Count.txt"
 	:: remove leading space
-	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\var\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\var\var_Last_Search_Count.txt"
-	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\var\var_Last_Search_Count.txt"
+	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\cache\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\cache\var_Last_Search_Count.txt"
+	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\cache\var_Last_Search_Count.txt"
 	IF %$LAST_SEARCH_COUNT% EQU 0 (
 		echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 		echo End search: %DATE% %Time% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -4378,16 +4393,16 @@ GoTo:EOF
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Munge DN file
-	IF EXIST "%$LogPath%\var\var_Last_Search_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_DN_munge.txt"
-	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_DN_munge.txt"
-	type "%$LogPath%\var\var_Last_Search_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_DN.txt"
+	IF EXIST "%$LogPath%\cache\var_Last_Search_DN_munge.txt" DEL /Q /F "%$LogPath%\cache\var_Last_Search_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\cache\var_Last_Search_DN.txt"') DO echo %%M >> "%$LogPath%\cache\var_Last_Search_DN_munge.txt"
+	type "%$LogPath%\cache\var_Last_Search_DN_munge.txt" > "%$LogPath%\cache\var_Last_Search_DN.txt"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Munge N_DN file
-	IF EXIST "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" DEL /Q /F "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
-	FOR /F "skip=2 delims=" %%M IN ('FIND /I "distinguishedName" "%$LogPath%\var\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
-	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\var\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\var\var_Last_Search_N_DN_munge.txt"
-	type "%$LogPath%\var\var_Last_Search_N_DN_munge.txt" > "%$LogPath%\var\var_Last_Search_N_DN.txt"
-	type "%$LogPath%\var\var_Last_Search_N_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	IF EXIST "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt" DEL /Q /F "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I "distinguishedName" "%$LogPath%\cache\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt"
+	FOR /F "skip=2 delims=" %%M IN ('FIND /I /V "distinguishedName" "%$LogPath%\cache\var_Last_Search_N_DN.txt"') DO echo %%M >> "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt"
+	type "%$LogPath%\cache\var_Last_Search_N_DN_munge.txt" > "%$LogPath%\cache\var_Last_Search_N_DN.txt"
+	type "%$LogPath%\cache\var_Last_Search_N_DN.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	IF %$SUPPRESS_VERBOSE% EQU 1 GoTo jumpSAUTOO
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -4395,7 +4410,7 @@ GoTo:EOF
 	echo ---------------------------------------------------------------------- >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	:: Detailed Output
-	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\var\var_Last_Search_DN.txt") DO (
+	FOR /F "USEBACKQ tokens=* delims=" %%N IN ("%$LogPath%\cache\var_Last_Search_DN.txt") DO (
 	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%~N)" -attr name %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo %$SEARCH_TYPE% DN: %%N >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -4517,7 +4532,7 @@ GoTo Search
 :end
 	IF EXIST "%$LOGPATH%\%$SESSION_LOG%" Echo End Session %DATE% %TIME%. >> "%$LOGPATH%\%$SESSION_LOG%"
 	IF EXIST "%$LOGPATH%\%$SESSION_LOG%" Echo. >> "%$LOGPATH%\%$SESSION_LOG%"
-	IF EXIST "%$LogPath%\var\var_$PID.txt" del /q "%$LogPath%\var\var_$PID.txt"
+	IF EXIST "%$LogPath%\cache\var_$PID.txt" del /q "%$LogPath%\cache\var_$PID.txt"
 	:: [FUTURE FEATURE]
 	::	Save Session Settings
 	:: IF /I NOT "%$SAVE_SETTINGS%"=="Yes" GoTo skipSSS
@@ -4528,8 +4543,8 @@ GoTo Search
 	IF %$DEGUB_MODE% EQU 1 GoTo skipCL
 	:: Last Search files
 	IF EXIST "%$LOGPATH%\%$LAST_SEARCH_LOG%" Del /q "%$LOGPATH%\%$LAST_SEARCH_LOG%"
-	IF EXIST "%$LOGPATH%\var\var_Last_Search_N_DN.txt" Del /q "%$LOGPATH%\var\var_Last_Search_N_DN.txt"
-	IF EXIST "%$LOGPATH%\var" RD /S /Q "%$LOGPATH%\var"
+	IF EXIST "%$LOGPATH%\cache\var_Last_Search_N_DN.txt" Del /q "%$LOGPATH%\cache\var_Last_Search_N_DN.txt"
+	IF EXIST "%$LOGPATH%\cache" RD /S /Q "%$LOGPATH%\cache"
 :skipCL
 	:: Archive session
 	Type "%$LOGPATH%\%$SESSION_LOG%" >> "%$LOGPATH%\%$ARCHIVE_LOG%"
