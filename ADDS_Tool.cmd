@@ -39,8 +39,8 @@
 @Echo Off
 @SETLOCAL enableextensions
 SET $PROGRAM_NAME=Active_Directory_Domain_Services_Tool
-SET $Version=0.17.0
-SET $BUILD=2021-12-07 0930
+SET $Version=0.18.0
+SET $BUILD=2023-03-13 1145
 Title %$PROGRAM_NAME%
 Prompt ADT$G
 color 8F
@@ -1857,6 +1857,7 @@ GoTo:EOF
 	:: Check results
 	FOR /F "tokens=3 delims=:" %%K IN ('FIND /I /C "=" "%$LogPath%\cache\var_Last_Search_DN.txt"') DO echo %%K> "%$LogPath%\cache\var_Last_Search_Count.txt"
 	:: remove leading space
+		::	Search Counter
 	FOR /F "tokens=1 delims= " %%P IN (%$LogPath%\cache\var_Last_Search_Count.txt) DO echo %%P> "%$LogPath%\cache\var_Last_Search_Count.txt"
 	SET /P $LAST_SEARCH_COUNT= < "%$LogPath%\cache\var_Last_Search_Count.txt"
 	call :SM
@@ -1867,6 +1868,7 @@ GoTo:EOF
 		@powershell Write-Host "Nothing found! Try again with broader wildcard" -ForegroundColor Red
 		GoTo skipSGN
 	)
+
 	:: Main output
 	echo Number of search results: %$LAST_SEARCH_COUNT% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Number of search results: %$LAST_SEARCH_COUNT%
@@ -1895,8 +1897,11 @@ GoTo:EOF
 	@powershell Write-Host '%%N' -ForegroundColor DarkGray
 	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%~N)" -attr name description displayName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo %$SEARCH_TYPE% DN: %%N >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSGET Group -members %%N | FIND /I /C "CN="> "%$LogPath%\cache\var_Last_Search_Group_Members_Count.txt"
+	echo %$SEARCH_TYPE% Members Count: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	type "%$LogPath%\cache\var_Last_Search_Group_Members_Count.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo %$SEARCH_TYPE% Members: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-		DSGET GROUP %%N -members %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% 2> nul | DSGET USER -upn -samid -fn -mi -ln -display -email %$DOMAIN_CREDENTIALS% 2> nul >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSGET GROUP %%N -members %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% 2> nul | DSGET USER -upn -samid -fn -mi -ln -display -email %$DOMAIN_CREDENTIALS% 2> nul >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Details: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	DSQUERY * -filter "(distinguishedName=%%~N)" -attr * %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% >> "%$LogPath%\%$LAST_SEARCH_LOG%"

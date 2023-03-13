@@ -1,10 +1,10 @@
-<h1 align="center"> Active Directory Domain Services Tool (ADDS_Tool) </h1> <br>
+![Microsoft Active Directory Logo](./images/MS_AD-logo.png)
 
-![Main Banner](./images/ADDS_T_Main_Banner.png)
+<h1 align="center"> Active Directory Domain Services Tool (ADDS_Tool) </h1> <br>
 
 <h2 align="center"> :bangbang:  :construction:  :bangbang: UNDER DEVELOPMENT :bangbang:  :construction:  :bangbang: </h2> <br>
 
-
+![Main Banner](./images/ADDS_T_Main_Banner.png)
 
 
 ## Table of Contents

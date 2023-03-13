@@ -19,6 +19,13 @@
 
 ---
 
+## Version 0.18.0 Build: 2023-03-13
+### Added
+- Number of group members for Group search
+
+---
+
+
 ## Version 0.17.0 Build: 2021-12-07
 ### Fixed
 - Custom OU setting for AD Base
@@ -29,7 +36,6 @@
 - abort to Search Menu
 - Search settings menu
 
----
 
 ## Version 0.16.1 Build: 2021-11-09
 ### Fixed
