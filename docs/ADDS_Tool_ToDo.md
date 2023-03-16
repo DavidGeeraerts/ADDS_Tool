@@ -2,13 +2,15 @@
 
 ## Priority Ordered
 
- - [ ] Config file
+
  - [ ] Timeout control
  - [ ] AD Recon
  - [ ] Dark Mode / Light Mode
 
 ### Done
 
+ - [X] Ability to run multiple instances (using PID seperation)
+ - [X] Config file
  - [X] Suppress Verbose output parameter
  - [X] include UTC
  - [X] Include ISO8601

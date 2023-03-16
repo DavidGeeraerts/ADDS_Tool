@@ -19,12 +19,26 @@
 
 ---
 
-## Version 0.18.0 Build: 2023-03-13
+## Version 0.19.0 Build: 2023-03-16
 ### Added
-- Number of group members for Group search
+- Ability to run multiple instances of the tool. Uses PID for log speration.
+- Config for archive log path
+- Nuke logs; ghost mode
+- config for session logs, keep?
+- Nuke log configuration setting in menu; on the fly change
+
+### Changed
+- Config file schema
+- Main menu HUD
+- ISO file varaible in cache uses $ISO8601
+- How ":End" handles closing the session.
 
 ---
 
+
+## Version 0.18.0 Build: 2023-03-13
+### Added
+- Number of group members for Group search
 
 ## Version 0.17.0 Build: 2021-12-07
 ### Fixed

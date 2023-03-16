@@ -14,7 +14,7 @@
 - [Description](#Description)
 - [Features](#features)
 - [Dependencies](#Dependencies)
-- [Changelog](#Changelog)
+- [Changelog](#Documents)
 - [License](#License)
 
 
@@ -49,6 +49,8 @@ I like the windows command shell. It does most of what's needed. When the shell 
 
 ## Features
 
+- :new: feature: ability to run multiple instances of the tool. This is useful when doing queries that take a long time, e.g. query every computer object in the directory.
+
  What's Working
 
 *Currently only searching is working.*
@@ -78,7 +80,8 @@ Default for logging is pathed to: `%APPDATA%\ADDS`
 
 `ADDS_Tool_Search_Archive.log` --archive log for all searches
 
-
+- There's the ability to keep session logs
+- There's the ability to nuke all logs --ghost mode.
 
 
 ## Parameters

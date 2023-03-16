@@ -39,8 +39,8 @@
 @Echo Off
 @SETLOCAL enableextensions
 SET $PROGRAM_NAME=Active_Directory_Domain_Services_Tool
-SET $Version=0.18.0
-SET $BUILD=2023-03-13 1145
+SET $Version=0.19.0
+SET $BUILD=2023-03-16 0715
 Title %$PROGRAM_NAME%
 Prompt ADT$G
 color 8F
@@ -61,6 +61,7 @@ SET $CONFIG_FILE=ADDS_Tool.config
 :: Defaults
 ::	uses user profile location for logs
 SET "$LOGPATH=%APPDATA%\ADDS"
+SET "$LOGPATH_ARCHIVE=%APPDATA%\ADDS"
 SET $SESSION_LOG=ADDS_Tool_Active_Session.log
 SET $SEARCH_SESSION_LOG=ADDS_Tool_Session_Search.log
 SET $LAST_SEARCH_LOG=ADDS_Tool_Last_Search.log
@@ -79,9 +80,13 @@ SET $SUPPRESS_VERBOSE=0
 :: {0 [No] , 1 [Yes]}
 SET $SORTED=1
 
-::	Keep all logs
+::	Keep PID Session logs
 ::	{Yes, No}
-SET $KPLOG=Yes
+SET $KPLOG=No
+
+:: Nuke logs
+::	{Yes, No}
+SET $NUKE=No
 
 ::	Keep Session Settings
 ::	{Yes, No}
@@ -99,6 +104,14 @@ SET $DEGUB_MODE=0
 ::#############################################################################
 ::	!!!!	Everything below here is 'hard-coded' [DO NOT MODIFY]	!!!!
 ::#############################################################################
+
+echo Loading...
+
+:::: Directory ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:CD
+	:: Launched from directory
+	SET "$PROGRAM_PATH=%~dp0"
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :::: Default Program Variables ::::::::::::::::::::::::::::::::::::::::::::::::
 :: Program Variables
@@ -147,6 +160,10 @@ FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$CONFIG_SCHEMA_VERSION" "%~dp0
 FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$LOGPATH" "%~dp0\%$CONFIG_FILE%"') DO SET "$CONFIG_LOGPATH=%%V"
 IF DEFINED $CONFIG_LOGPATH SET "$LOGPATH=%$CONFIG_LOGPATH%"
 FOR /F %%R IN ('ECHO %$LOGPATH%') DO SET $LOGPATH=%%R
+::	Archive Logs
+FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$LOGPATH_ARCHIVE" "%~dp0\%$CONFIG_FILE%"') DO SET "$CONFIG_LOGPATH_ARCHIVE=%%V"
+IF DEFINED $CONFIG_LOGPATH_ARCHIVE SET "$LOGPATH_ARCHIVE=%$CONFIG_LOGPATH%"
+FOR /F %%R IN ('ECHO %$LOGPATH_ARCHIVE%') DO SET $LOGPATH_ARCHIVE=%%R
 ::	Session log
 FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$SESSION_LOG" "%~dp0\%$CONFIG_FILE%"') DO SET "$CONFIG_SESSION_LOG=%%V"
 IF DEFINED $CONFIG_SESSION_LOG SET "$SESSION_LOG=%$CONFIG_SESSION_LOG%"
@@ -186,6 +203,8 @@ FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$SORTED" "%~dp0\%$CONFIG_FILE%
 IF DEFINED $CONFIG_SORTED SET "$SORTED=%$CONFIG_SORTED%"
 FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$KPLOG" "%~dp0\%$CONFIG_FILE%"') DO SET "$CONFIG_KPLOG=%%V"
 IF DEFINED $CONFIG_KPLOG SET "$KPLOG=%$CONFIG_KPLOG%"
+FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"$NUKE" "%~dp0\%$CONFIG_FILE%"') DO SET "$CONFIG_NUKE=%%V"
+IF DEFINED $CONFIG_NUKE SET "$NUKE=%$CONFIG_NUKE%"
 
 REM variable name to Friendly name
 IF %$SORTED% EQU 1 (SET $SORTED_N=Yes) ELSE (SET $SORTED_N=No)
@@ -193,14 +212,14 @@ IF %$SUPPRESS_VERBOSE% EQU 0 (SET $SUPPRESS_VERBOSE_N=No) ELSE (SET $SUPPRESS_VE
 
 :skipCF
 
+:::: Original Logging Path ::::::::::::::::::::::::::::::::::::::::::::::::::::
+:BLPath
+	SET $BASE_LOGPATH=%$LOGPATH%
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-:::: Directory ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-:CD
-	:: Launched from directory
-	SET "$PROGRAM_PATH=%~dp0"
-	::	Setup logging
+:::: Temporary Cache ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:TCache
 	IF NOT EXIST "%$LOGPATH%\cache" MD "%$LOGPATH%\cache"
-	cd /D "%$LOGPATH%"
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :::: PID ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -211,12 +230,28 @@ IF %$SUPPRESS_VERBOSE% EQU 0 (SET $SUPPRESS_VERBOSE_N=No) ELSE (SET $SUPPRESS_VE
 	SET /P $PID= < "%$LogPath%\cache\var_$PID.txt"
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+:::: PID Session Logging ::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:PIDL
+	IF NOT EXIST "%$LOGPATH%\%$PID%" MD "%$LOGPATH%\%$PID%"
+	IF NOT EXIST "%$LOGPATH%\%$PID%\cache" MD "%$LOGPATH%\%$PID%\cache"
+	MOVE /Y "%$LogPath%\cache\var_$PID.txt" "%$LOGPATH%\%$PID%\cache"
+	RD /S /Q  "%$LogPath%\cache" 2> nul
+	SET "$LOGPATH=%$LOGPATH%\%$PID%"
+	cd /D "%$BASE_LOGPATH%"
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+:::: Logging Variables ::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::	mostly for debugging
+echo %$LogPath%> "%$LOGPATH%\cache\var_$LOGPATH.txt"
+echo %$BASE_LOGPATH%> "%$LOGPATH%\cache\var_$BASE_LOGPATH.txt"
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
 :::: fISO8601 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :fISO8601
 	:: Function to ensure ISO 8601 Date format yyyy-mmm-dd
 	:: Easiest way to get ISO date
-	@powershell Get-Date -format "yyyy-MM-dd" > "%$LogPath%\cache\var_ISO8601_Date.txt"
-	SET /P $ISO_DATE= < "%$LogPath%\cache\var_ISO8601_Date.txt"
+	@powershell Get-Date -format "yyyy-MM-dd" > "%$LogPath%\cache\var_$ISO8601_Date.txt"
+	SET /P $ISO_DATE= < "%$LogPath%\cache\var_$ISO8601_Date.txt"
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :::: UTC ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -384,6 +419,7 @@ GoTo end
 	ECHO		%$PROGRAM_NAME%
 	echo			Version: %$Version%
 	IF %$DEGUB_MODE% EQU 1 Echo			Build: %$BUILD%
+	Echo			PID: %$PID%
 	echo.
 	echo		 	%DATE% %TIME%
 	ECHO.
@@ -402,7 +438,8 @@ GoTo end
 	Echo ------------------------
 	Echo  Log File Path: %$LogPath%
 	Echo  Log File Name: %$SESSION_LOG%
-	Echo  Keep Log at End: %$kpLog%
+	Echo  Keep PID Session Logs: %$kpLog%
+	Echo  Nuke logs: %$NUKE%
 	Echo.
 	Echo Current Domain settings:
 	Echo ------------------------
@@ -3865,7 +3902,8 @@ GoTo skipSSS
 	Echo ------------------------
 	Echo  Log File Path: %$LogPath%
 	Echo  Log File Name: %$SESSION_LOG%
-	Echo  Keep Log at End: %$kpLog%
+	Echo  Keep PID Session Log: %$kpLog%
+	Echo  Nuke logging: %$NUKE%
 	Echo.
 	Echo  Instructions
 	Echo ------------------------
@@ -3876,6 +3914,7 @@ GoTo skipSSS
 	echo %$LOGPATH%> "%$LOGPATH%\cache\var_$LOGPATH.txt"
 	echo %$SESSION_LOG%> "%$LOGPATH%\cache\var_$SESSION_LOG.txt"
 	echo %$kpLog%> "%$LOGPATH%\cache\var_$kpLog.txt"
+	echo %$NUKE%> "%$LOGPATH%\cache\var_$NUKE.txt"
 	SET /p $LOGPATH=Log Path:
 	echo.
 	Echo ^("Yes" or "No"^)
@@ -3885,6 +3924,15 @@ GoTo skipSSS
 	IF /I NOT "%$kpLog%"=="Yes" SET /A $CHECK_KPLOG+=1
 	IF /I NOT "%$kpLog%"=="No" SET /A $CHECK_KPLOG+=1
 	IF %$CHECK_KPLOG% EQU 2 SET /P $kpLog= < "%$LOGPATH%\cache\var_$kpLog.txt"
+	echo.
+	Echo ^("Yes" or "No"^)
+	SET /P $NUKE=Nuke Logs:
+	echo %$NUKE% | FIND /I "Y" && SET $$NUKE=Yes
+	echo %$NUKE% | FIND /I "N" && SET $$NUKE=No
+	IF /I NOT "%$NUKE%"=="Yes" SET /A $CHECK_NUKE+=1
+	IF /I NOT "%$NUKE%"=="No" SET /A $CHECK_NUKE+=1	
+	IF %$CHECK_NUKE% EQU 2 SET /P $NUKE= < "%$LOGPATH%\cache\var_$NUKE.txt"
+	
 	:: ERROR CHECKING
 	IF NOT EXIST %$LogPath% mkdir %$LogPath% || Echo Log path not valid and/or file name not valid. Back to default!
 	IF NOT EXIST %$LogPath% SET /P $LogPath= < "%$LOGPATH%\cache\var_$LOGPATH.txt"
@@ -4537,36 +4585,42 @@ GoTo Search
 :end
 	IF EXIST "%$LOGPATH%\%$SESSION_LOG%" Echo End Session %DATE% %TIME%. >> "%$LOGPATH%\%$SESSION_LOG%"
 	IF EXIST "%$LOGPATH%\%$SESSION_LOG%" Echo. >> "%$LOGPATH%\%$SESSION_LOG%"
-	IF EXIST "%$LogPath%\cache\var_$PID.txt" del /q "%$LogPath%\cache\var_$PID.txt"
+
+	:: Close any open files
+	taskkill /F /FI "WINDOWTITLE eq ADDS*" 1> nul 2> nul
+	
+	:: Archive session
+	Type "%$LOGPATH%\%$SESSION_LOG%" >> "%$LOGPATH_ARCHIVE%\%$ARCHIVE_LOG%"
+	Type "%$LOGPATH%\%$SEARCH_SESSION_LOG%" >> "%$LOGPATH_ARCHIVE%\%$ARCHIVE_SEARCH_LOG%"
+
+	::	Check for debug mode
+	IF %$DEGUB_MODE% EQU 1 GoTo skipCL
+	
+	::	Check for Nuke mode
+	IF /I %$NUKE%==Yes RD /S /Q "%$BASE_LOGPATH%" 
+	IF /I %$NUKE%==Yes GoTo skipLC
+	
+	::	PID Session Logs
+	IF /I %$KPLOG%==Yes GoTo skipLC
+	IF EXIST "%$LOGPATH%" RD /S /Q "%$LOGPATH%"
+	:: Keep logs check
+	Del /q "%$BASE_LOGPATH%\ADDS_PID_Sessions.txt" 2> nul
+		:: Cleanup PID sessions
+	RD /S /Q  "%$LOGPATH%" 2> nul
+	echo %DATE% %TIME% >> "%$BASE_LOGPATH%\ADDS_PID_Sessions.txt"
+	echo Directory {%$LOGPATH%} was deleted! >> "%$BASE_LOGPATH%\ADDS_PID_Sessions.txt"
+:: skip point PID session cleanup
+:skipLC
+:: Skip point for debug
+:skipCL	
+
+
+
 	:: [FUTURE FEATURE]
 	::	Save Session Settings
 	:: IF /I NOT "%$SAVE_SETTINGS%"=="Yes" GoTo skipSSS
 	:: IF NOT EXIST "%$LOGPATH%\Settings" mkdir "%$LOGPATH%\Settings"
 	:: :skipSSS
-
-	::	Check for debug mode
-	IF %$DEGUB_MODE% EQU 1 GoTo skipCL
-	:: Last Search files
-	IF EXIST "%$LOGPATH%\%$LAST_SEARCH_LOG%" Del /q "%$LOGPATH%\%$LAST_SEARCH_LOG%"
-	IF EXIST "%$LOGPATH%\cache\var_Last_Search_N_DN.txt" Del /q "%$LOGPATH%\cache\var_Last_Search_N_DN.txt"
-	IF EXIST "%$LOGPATH%\cache" RD /S /Q "%$LOGPATH%\cache"
-:skipCL
-	:: Archive session
-	Type "%$LOGPATH%\%$SESSION_LOG%" >> "%$LOGPATH%\%$ARCHIVE_LOG%"
-	Del /q "%$LOGPATH%\%$SESSION_LOG%"
-	Type "%$LOGPATH%\%$SEARCH_SESSION_LOG%" >> "%$LOGPATH%\%$ARCHIVE_SEARCH_LOG%"
-	Del /q "%$LOGPATH%\%$SEARCH_SESSION_LOG%"
-	IF %$DEGUB_MODE% EQU 1 GoTo skipLC
-	:: Keep logs check
-	IF /I %$KPLOG%==Yes IF EXIST "%$LOGPATH%\ReadMe.txt" Del /q "%$LOGPATH%\ReadMe.txt"
-	IF /I %$KPLOG%==Yes GoTo skipLC
-	::	Delete all logs
-		:: Close any open files
-	taskkill /F /FI "WINDOWTITLE eq ADDS*"
-	IF EXIST "%$LOGPATH%" RD /S /Q "%$LOGPATH%"
-	echo %DATE% %TIME% > "%$LOGPATH%\ReadMe.txt"
-	echo Directory was nuked! >> "%$LOGPATH%\ReadMe.txt"
-:skipLC
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :::: Credits ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
