@@ -39,8 +39,8 @@
 @Echo Off
 @SETLOCAL enableextensions
 SET $PROGRAM_NAME=Active_Directory_Domain_Services_Tool
-SET $Version=0.19.0
-SET $BUILD=2023-03-16 0715
+SET $Version=0.19.1
+SET $BUILD=2023-03-27 0800
 Title %$PROGRAM_NAME%
 Prompt ADT$G
 color 8F
@@ -1934,11 +1934,11 @@ GoTo:EOF
 	@powershell Write-Host '%%N' -ForegroundColor DarkGray
 	DSQUERY * %$AD_BASE% -scope %$AD_SCOPE% -limit %$sLimit% -filter "(distinguishedName=%%~N)" -attr name description displayName %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo %$SEARCH_TYPE% DN: %%N >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	DSGET Group -members %%N | FIND /I /C "CN="> "%$LogPath%\cache\var_Last_Search_Group_Members_Count.txt"
+	DSGET Group -members %%N %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% 2> nul | FIND /I /C "CN="> "%$LogPath%\cache\var_Last_Search_Group_Members_Count.txt"
 	echo %$SEARCH_TYPE% Members Count: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	type "%$LogPath%\cache\var_Last_Search_Group_Members_Count.txt" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo %$SEARCH_TYPE% Members: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	DSGET GROUP %%N -members %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% 2> nul | DSGET USER -upn -samid -fn -mi -ln -display -email %$DOMAIN_CREDENTIALS% 2> nul >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	DSGET GROUP %%N -members %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% 2> nul | DSGET USER -upn -samid -fn -mi -ln -display -email %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% 2> nul >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo. >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Details: >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	DSQUERY * -filter "(distinguishedName=%%~N)" -attr * %$AD_SERVER_SEARCH% %$DOMAIN_CREDENTIALS% >> "%$LogPath%\%$LAST_SEARCH_LOG%"

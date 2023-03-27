@@ -19,6 +19,14 @@
 
 ---
 
+## Version 0.19.1 Build: 2023-03-27
+### Fixed
+- Group member search suppress error
+- not using configured DC and credentials for group member search
+
+---
+
+
 ## Version 0.19.0 Build: 2023-03-16
 ### Added
 - Ability to run multiple instances of the tool. Uses PID for log speration.
@@ -32,9 +40,6 @@
 - Main menu HUD
 - ISO file varaible in cache uses $ISO8601
 - How ":End" handles closing the session.
-
----
-
 
 ## Version 0.18.0 Build: 2023-03-13
 ### Added
