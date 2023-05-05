@@ -2,7 +2,6 @@
 
 <h1 align="center"> Active Directory Domain Services Tool (ADDS_Tool) </h1> <br>
 
-<h2 align="center"> :bangbang:  :construction:  :bangbang: UNDER DEVELOPMENT :bangbang:  :construction:  :bangbang: </h2> <br>
 
 ![Main Banner](./images/ADDS_T_Main_Banner.png)
 
@@ -123,6 +122,11 @@ Must be runnig with administartive privilege in order to install RSAT.
 
 [PowerShell](https://docs.microsoft.com/en-us/powershell/scripting/overview): Leveraged for some functions.
 
+<h2 align="center"> :bangbang:  :construction:  :bangbang: UNDER DEVELOPMENT :bangbang:  :construction:  :bangbang: </h2> <br>
+
+## Future Features
+
+Everything else beyond search.
 
 ## License
 

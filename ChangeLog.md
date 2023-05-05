@@ -19,13 +19,17 @@
 
 ---
 
+## Version 0.19.2 Build: 2023-05-05
+### Fixed
+- Group member count
+
+---
+
+
 ## Version 0.19.1 Build: 2023-03-27
 ### Fixed
 - Group member search suppress error
 - not using configured DC and credentials for group member search
-
----
-
 
 ## Version 0.19.0 Build: 2023-03-16
 ### Added
