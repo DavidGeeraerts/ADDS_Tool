@@ -39,8 +39,8 @@
 @Echo Off
 @SETLOCAL enableextensions
 SET $PROGRAM_NAME=Active_Directory_Domain_Services_Tool
-SET $Version=0.19.2
-SET $BUILD=2023-05-05 0730
+SET $Version=0.19.3
+SET $BUILD=2026-02-03 0800
 Title %$PROGRAM_NAME%
 Prompt ADT$G
 color 8F
@@ -254,14 +254,21 @@ echo %$BASE_LOGPATH%> "%$LOGPATH%\cache\var_$BASE_LOGPATH.txt"
 	SET /P $ISO_DATE= < "%$LogPath%\cache\var_$ISO8601_Date.txt"
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+::::	System Inforamtion ::::::::::::::::::::::::::::::::::::::::::::::::::::
+:: cache system information
+systeminfo > "%$LogPath%\cache\SystemInfo.txt"
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
 :::: UTC ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :UTC
 	:: Universal Time Coordinate
+	SET $UTC=
 	IF EXIST "%$LogPath%\cache\var_$UTC.txt" SET /P $UTC= < "%$LogPath%\cache\var_$UTC.txt"
-	IF NOT DEFINED $UTC FOR /F "tokens=1 delims=()" %%P IN ('wmic timezone get Description ^| findstr /C:"UTC" /I') DO ECHO %%P > "%$LogPath%\cache\var_$UTC.txt"
+	IF NOT DEFINED $UTC for /f "tokens=3 delims= " %%P IN ('FIND /I "Time Zone" "%$LogPath%\cache\SystemInfo.txt"') DO echo %%P> "%$LogPath%\cache\var_$UTC.txt"
 	IF NOT DEFINED $UTC SET /P $UTC= < "%$LogPath%\cache\var_$UTC.txt"
+	:: Common name for timezone
 	IF EXIST "%$LogPath%\cache\var_$UTC_STANDARD_NAME.txt" SET /P $UTC_STANDARD_NAME= < "%$LogPath%\cache\var_$UTC_STANDARD_NAME.txt"
-	IF NOT DEFINED $UTC_STANDARD_NAME FOR /F "tokens=2 delims==" %%P IN ('wmic timezone get StandardName /value ^| findstr /C:"=" /I') DO ECHO %%P > "%$LogPath%\cache\var_$UTC_STANDARD_NAME.txt"
+	IF NOT DEFINED $UTC_STANDARD_NAME for /f "tokens=1 delims=" %%P IN ('FIND /I "Time Zone" "%$LogPath%\cache\SystemInfo.txt"') DO echo %%P> "%$LogPath%\cache\var_$UTC_STANDARD_NAME.txt"
 	IF NOT DEFINED $UTC_STANDARD_NAME SET /P $UTC_STANDARD_NAME= < "%$LogPath%\cache\var_$UTC_STANDARD_NAME.txt"
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -269,7 +276,8 @@ echo %$BASE_LOGPATH%> "%$LOGPATH%\cache\var_$BASE_LOGPATH.txt"
 :wLog
 	:: Start session and write to log
 	Echo Start Session %DATE% %TIME% > "%$LogPath%\%$SESSION_LOG%"
-	echo UTC: %$UTC% %$UTC_STANDARD_NAME% >> "%$LogPath%\%$SESSION_LOG%"
+	echo UTC: "%$UTC%" >> "%$LogPath%\%$SESSION_LOG%"
+	echo UTC Name: "%$UTC_STANDARD_NAME%" >> "%$LogPath%\%$SESSION_LOG%"
 	Echo Program Name: %$PROGRAM_NAME% >> "%$LogPath%\%$SESSION_LOG%"
 	Echo Program Version: %$Version% >> "%$LogPath%\%$SESSION_LOG%"
 	Echo Program Build: %$BUILD% >> "%$LogPath%\%$SESSION_LOG%"
@@ -286,7 +294,7 @@ echo %$BASE_LOGPATH%> "%$LOGPATH%\cache\var_$BASE_LOGPATH.txt"
 	::	Check for Domain computer
 	::	If value is 1 domain, is 0 workgroup
 	SET $DOMAIN_PC=1
-	wmic computersystem get DomainRole /value | (FIND "0") && (SET $DOMAIN_PC=0)
+	FIND /I "Domain:" "%$LogPath%\cache\SystemInfo.txt" | FIND /I "%COMPUTERNAME%" 2> nul && (SET $DOMAIN_PC=0)
 	echo %$DOMAIN_PC% > "%$LogPath%\cache\var_$DOMAIN_PC.txt"
 	if %$DOMAIN_PC% EQU 0 SET $DOMAIN=%COMPUTERNAME%
 	if %$DOMAIN_PC% EQU 1 SET $DOMAIN=%USERDNSDOMAIN%
@@ -589,7 +597,8 @@ GoTo end
 :sHeader
 	IF EXIST "%$LogPath%\%$LAST_SEARCH_LOG%" DEL /Q "%$LogPath%\%$LAST_SEARCH_LOG%"
 	Echo Start search: %DATE% %Time% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	echo UTC: %$UTC% %$UTC_STANDARD_NAME% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo UTC: "%$UTC%" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo %$UTC_STANDARD_NAME% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	Echo Search Type: %$SEARCH_TYPE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Search Attribute: %$SEARCH_ATTRIBUTE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Search Key: %$SEARCH_KEY% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
@@ -4070,17 +4079,19 @@ SET "$DC_TAG=DS Settings"
 	echo.
 	IF /I "%$SESSION_USER_STATUS%"=="local" IF NOT DEFINED $cUSERPASSWORD GoTo err30
 	echo Pick a Domain Controller to connect to
-	IF "%$SESSION_USER_STATUS%"=="domain" (dsquery server -o rdn -forest -domain %$domain% -name "*" -limit %$sLimit% -uc 2> nul) ELSE (
-		dsquery server -o rdn -forest -domain %$domain% -name "*" -u %$DOMAIN_USER% -p %$cUSERPASSWORD% -limit %$sLimit% -uc 2> nul
-		) > "%$LOGPATH%\cache\var_Domain_Controller_List.txt"
-	type "%$LOGPATH%\cache\var_Domain_Controller_List.txt"
+	IF "%$SESSION_USER_STATUS%"=="domain" (dsquery server -o rdn -forest -domain %$domain% -name "*" -limit %$sLimit% -uc 2> nul > "%$LOGPATH%\cache\Domain_Controller_List.txt") ELSE (
+		dsquery server -o rdn -forest -domain %$domain% -name "*" -u %$DOMAIN_USER% -p %$cUSERPASSWORD% -limit %$sLimit% -uc 2> nul > "%$LOGPATH%\cache\Domain_Controller_List.txt"
+		)
+	type "%$LOGPATH%\cache\Domain_Controller_List.txt"
+	SET $DC=
 	SET /P $DC=Domain Controller:
 	:: Validate input
-	FIND /I "%$DC%" "%$LOGPATH%\cache\var_Domain_Controller_List.txt" 1> nul 2> nul
+	IF NOT DEFINED $DC GoTo uSetDC 
+	FIND /I "%$DC%" "%$LOGPATH%\cache\Domain_Controller_List.txt" 1> nul 2> nul
 	SET $DC_INPUT_CHECK=%ERRORLEVEL%
 	IF %$DC_INPUT_CHECK% NEQ 0 (
 		@powershell Write-Host "Not a valid DC!" -ForegroundColor Red) & (
-		echo.) & (
+		echo.) & ( SET /P $DC= < "%$LOGPATH%\cache\var_$DC.txt") & (
 		timeout /t 10) & (
 		GoTo subDC
 		)

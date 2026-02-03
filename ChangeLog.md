@@ -19,12 +19,17 @@
 
 ---
 
-## Version 0.19.2 Build: 2023-05-05
+## Version 0.19.3 Build: 2026-02-02
 ### Fixed
-- Group member count
+- WMIC deprecation
+- Changing domain controller
+- UTC & Timezone
 
 ---
 
+## Version 0.19.2 Build: 2023-05-05
+### Fixed
+- Group member count
 
 ## Version 0.19.1 Build: 2023-03-27
 ### Fixed
