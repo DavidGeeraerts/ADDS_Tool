@@ -19,13 +19,20 @@
 
 ---
 
+## Version 0.20.0 Build: 2026-03-25
+### Fixed
+- UTC & Timezone
+
+### Changed
+- get UTC offset via powershell
+
+---
+
 ## Version 0.19.3 Build: 2026-02-02
 ### Fixed
 - WMIC deprecation
 - Changing domain controller
 - UTC & Timezone
-
----
 
 ## Version 0.19.2 Build: 2023-05-05
 ### Fixed

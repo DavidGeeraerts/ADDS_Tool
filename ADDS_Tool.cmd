@@ -39,8 +39,8 @@
 @Echo Off
 @SETLOCAL enableextensions
 SET $PROGRAM_NAME=Active_Directory_Domain_Services_Tool
-SET $Version=0.19.3
-SET $BUILD=2026-02-03 0800
+SET $Version=0.20.0
+SET $BUILD=2026-03-25 10:45
 Title %$PROGRAM_NAME%
 Prompt ADT$G
 color 8F
@@ -264,7 +264,7 @@ systeminfo > "%$LogPath%\cache\SystemInfo.txt"
 	:: Universal Time Coordinate
 	SET $UTC=
 	IF EXIST "%$LogPath%\cache\var_$UTC.txt" SET /P $UTC= < "%$LogPath%\cache\var_$UTC.txt"
-	IF NOT DEFINED $UTC for /f "tokens=3 delims= " %%P IN ('FIND /I "Time Zone" "%$LogPath%\cache\SystemInfo.txt"') DO echo %%P> "%$LogPath%\cache\var_$UTC.txt"
+	IF NOT DEFINED $UTC @powershell (Get-TimeZone).BaseUtcOffset.hours > "%$LogPath%\cache\var_$UTC.txt"
 	IF NOT DEFINED $UTC SET /P $UTC= < "%$LogPath%\cache\var_$UTC.txt"
 	:: Common name for timezone
 	IF EXIST "%$LogPath%\cache\var_$UTC_STANDARD_NAME.txt" SET /P $UTC_STANDARD_NAME= < "%$LogPath%\cache\var_$UTC_STANDARD_NAME.txt"
@@ -598,7 +598,7 @@ GoTo end
 	IF EXIST "%$LogPath%\%$LAST_SEARCH_LOG%" DEL /Q "%$LogPath%\%$LAST_SEARCH_LOG%"
 	Echo Start search: %DATE% %Time% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo UTC: "%$UTC%" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
-	echo %$UTC_STANDARD_NAME% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
+	echo "%$UTC_STANDARD_NAME%" >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	Echo Search Type: %$SEARCH_TYPE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Search Attribute: %$SEARCH_ATTRIBUTE% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
 	echo Search Key: %$SEARCH_KEY% >> "%$LogPath%\%$LAST_SEARCH_LOG%"
